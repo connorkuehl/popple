@@ -71,6 +71,7 @@ func TestParseSubjectInParens(t *testing.T) {
 		{"(Poe the Potato Pirate++)", "Poe the Potato Pirate++", true},
 		{"", "", false},
 		{"Poe the Potato Pirate", "", false},
+		{"((Poe the) (Potato Pirate))", "(Poe the) (Potato Pirate)", true},
 	}
 
 	for _, tt := range tests {

@@ -62,14 +62,26 @@ func parseSubjectInParens(reader *strings.Reader) (string, bool) {
 		return "", false
 	}
 
-	ch, _, err = reader.ReadRune()
-	for err == nil && ch != ')' {
-		subj.WriteRune(ch)
+	open := 1
 
+	ch, _, err = reader.ReadRune()
+	for err == nil {
+		if ch == '(' {
+			open++
+		}
+		if ch == ')' {
+			open--
+		}
+
+		if open == 0 {
+			break
+		}
+
+		subj.WriteRune(ch)
 		ch, _, err = reader.ReadRune()
 	}
 
-	if ch != ')' {
+	if open != 0 {
 		return "", false
 	}
 
