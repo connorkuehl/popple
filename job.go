@@ -23,6 +23,7 @@ func doWork(job *Job, db *gorm.DB) {
 		verb string
 		call func(*Context)
 	}{
+		{"announce", SetAnnounce},
 		{"karma", CheckKarma},
 	}
 
