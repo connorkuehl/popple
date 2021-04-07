@@ -44,6 +44,7 @@ func TestParseSubjectTilWhitespaceOrKarma(t *testing.T) {
 		{"Poe++Hello", "Poe"},
 		{"Po-e", "Po"},
 		{"Hello World", "Hello"},
+		{"@Poe", "Poe"},
 	}
 
 	for _, tt := range tests {

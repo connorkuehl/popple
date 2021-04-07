@@ -31,6 +31,10 @@ func parseSubjectTilWhitespaceOrKarma(reader *strings.Reader) (string, bool) {
 	subj := strings.Builder{}
 	ch, _, err := reader.ReadRune()
 
+	if err == nil && ch == '@' {
+		ch, _, err = reader.ReadRune()
+	}
+
 	shouldStop := func(r rune) bool {
 		return r == '+' || r == '-' || unicode.IsSpace(r)
 	}
