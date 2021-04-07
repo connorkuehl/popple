@@ -15,24 +15,21 @@ func IsCommand(cmdID string, s string) bool {
 }
 
 func CheckKarma(job *Job, db *gorm.DB) {
+	var sep string
 	s := job.Session
 	m := job.Message
 	guildID := m.GuildID
 
-	words := strings.Fields(m.ContentWithMentionsReplaced())[1:]
-	if len(words) < 1 {
-		return
-	}
+	message := m.ContentWithMentionsReplaced()[len(COMMAND_SIGIL+"karma"):]
+	modifiers := ParseModifiers(message)
 
 	reply := strings.Builder{}
 
-	for _, word := range words {
-		name := ParseName(word)
-
+	for subject, _ := range modifiers {
 		var entity Entity
-		db.Where(&Entity{GuildID: guildID, Name: name}).First(&entity)
-		reply.WriteString(fmt.Sprintf("%s has %d karma.", name, entity.Karma))
-		reply.WriteString(" ")
+		db.Where(&Entity{GuildID: guildID, Name: subject}).First(&entity)
+		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, subject, entity.Karma))
+		sep = " "
 	}
 
 	_, err := s.ChannelMessageSend(m.ChannelID, reply.String())
@@ -46,55 +43,33 @@ func ModKarma(job *Job, db *gorm.DB) {
 	m := job.Message
 	guildID := m.GuildID
 
-	words := strings.Fields(m.ContentWithMentionsReplaced())
+	message := m.ContentWithMentionsReplaced()
+	modifiers := ParseModifiers(message)
 
-	updates := make(map[string]Modifier)
 	reply := strings.Builder{}
 
-	for _, word := range words {
-		mod := ParseModifier(word)
-		if mod == nil {
+	var sep string
+	for subject, netKarma := range modifiers {
+		if netKarma == 0 {
 			continue
 		}
 
-		if mod.Name == "" {
-			fmt.Fprintf(os.Stderr, "Error: parsed an empty name from token %s\n", word)
-			continue
-		}
-
-		/* Are these copying struct values? */
-		prev := updates[mod.Name]
-		prev.NetKarma += mod.NetKarma
-		prev.Name = mod.Name
-		updates[mod.Name] = Modifier{Name: prev.Name, NetKarma: prev.NetKarma}
-	}
-
-	processed := 0
-	mapLen := len(updates)
-
-	if mapLen < 1 {
-		return
-	}
-
-	for _, v := range updates {
 		var entity Entity
 
-		db.Where(&Entity{GuildID: guildID, Name: v.Name}).FirstOrCreate(&entity)
-		entity.Karma += v.NetKarma
+		db.Where(&Entity{GuildID: guildID, Name: subject}).FirstOrCreate(&entity)
+		entity.Karma += netKarma
 
-		reply.WriteString(fmt.Sprintf("%s has %d karma", entity.Name, entity.Karma))
+		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, entity.Name, entity.Karma))
 		if entity.Karma == 0 {
-			reply.WriteString(" and has therefore been garbage-collected")
 			db.Delete(entity)
 		} else {
 			db.Save(entity)
 		}
-		reply.WriteString(".")
-		if processed < mapLen-1 {
-			reply.WriteString(" ")
-		}
+		sep = " "
+	}
 
-		processed++
+	if reply.Len() == 0 {
+		return
 	}
 
 	_, err := s.ChannelMessageSend(m.ChannelID, reply.String())
