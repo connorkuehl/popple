@@ -8,19 +8,20 @@ import (
 	"gorm.io/gorm"
 )
 
-const COMMAND_SIGIL string = "!"
-
-func IsCommand(cmdID string, s string) bool {
-	return strings.HasPrefix(s, COMMAND_SIGIL+cmdID)
+type Context struct {
+	Job    *Job
+	DB     *gorm.DB
+	Header string
 }
 
-func CheckKarma(job *Job, db *gorm.DB) {
+func CheckKarma(ctx *Context) {
 	var sep string
-	s := job.Session
-	m := job.Message
+	db := ctx.DB
+	s := ctx.Job.Session
+	m := ctx.Job.Message
 	guildID := m.GuildID
 
-	message := m.ContentWithMentionsReplaced()[len(COMMAND_SIGIL+"karma"):]
+	message := m.ContentWithMentionsReplaced()[len(ctx.Header):]
 	modifiers := ParseModifiers(message)
 
 	reply := strings.Builder{}
@@ -38,9 +39,10 @@ func CheckKarma(job *Job, db *gorm.DB) {
 	}
 }
 
-func ModKarma(job *Job, db *gorm.DB) {
-	s := job.Session
-	m := job.Message
+func ModKarma(ctx *Context) {
+	db := ctx.DB
+	s := ctx.Job.Session
+	m := ctx.Job.Message
 	guildID := m.GuildID
 
 	message := m.ContentWithMentionsReplaced()

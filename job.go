@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/bwmarrin/discordgo"
 	"gorm.io/gorm"
 )
@@ -15,12 +18,24 @@ func doWork(job *Job, db *gorm.DB) {
 		return
 	}
 
-	switch {
-	case IsCommand("karma", job.Message.Content):
-		CheckKarma(job, db)
-	default:
-		ModKarma(job, db)
+	myUser := "@" + job.Session.State.User.Username
+	cmds := []struct {
+		verb string
+		call func(*Context)
+	}{
+		{"karma", CheckKarma},
 	}
+
+	msg := job.Message.ContentWithMentionsReplaced()
+	for _, c := range cmds {
+		header := fmt.Sprintf("%s %s ", myUser, c.verb)
+		if strings.HasPrefix(msg, header) {
+			c.call(&Context{job, db, header})
+			return
+		}
+	}
+
+	ModKarma(&Context{job, db, ""})
 }
 
 func worker(workQueue <-chan Job, cancel <-chan struct{}, db *gorm.DB) {
