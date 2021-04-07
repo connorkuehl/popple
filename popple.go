@@ -51,6 +51,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	db.AutoMigrate(&Config{})
 	db.AutoMigrate(&Entity{})
 
 	session, err := discordgo.New("Bot " + string(token))
