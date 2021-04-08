@@ -123,6 +123,14 @@ Person) Person++
 It can be turned back on with `@Popple announce yes` or
 `@Popple announce on`.
 
+## Installing
+
+```console
+$ go install github.com/connorkuehl/popple@latest
+```
+
+`latest` can be replaced with a specific commit SHA or release tag if preferred.
+
 ## Deploying
 
 Example systemd unit:
