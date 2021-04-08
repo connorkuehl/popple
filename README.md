@@ -34,6 +34,14 @@ to better suit your needs.
 
 ## Usage
 
+| Command | Values | Description |
+| - | - | - |
+| @Popple announce | on, off, yes, no | Whether or not Popple will print a subject's karma level after it has been modified |
+| @Popple karma | Something with karma | Prints the subjects' karma level. Multiple subjects' karma levels may be checked |
+| Subject++ | N/A | Increases Subject's karma |
+| Subject-- | N/A | Decreases Subject's karma |
+| (Subject with space or - +) | N/A | Parentheses may be used for complicated subjects with whitespace or special symbols |
+
 Once Popple has joined a Discord server, it will watch for karma events in
 the chat. Increase or decrease karma by suffixing the subject with a `++`
 or a `--`, respectively.
@@ -68,22 +76,52 @@ Person) PoeThePotatoPirate++++ Popple--++++ HelloWorld----
 Popple) PoeThePotatoPirate has 2 karma. Popple has 3 karma. HelloWorld has -2 karma.
 ```
 
-Karma levels can be checked without requiring any karma events with the
-`!karma` command:
+Parentheses may be used for more complicated karma subjects, including those
+with whitespace or even `+` or `-` in their names.
 
 ```txt
-Person) !karma Popple
+Person) (Poe the Potato Pirate)++ (meme-bot)++
+Popple) Poe the Potato Pirate has 2 karma. meme-bot has 2 karma.
+```
+
+Karma levels can be checked without requiring any karma events:
+
+```txt
+Person) @Popple karma Popple
 Popple) Popple has 3 karma.
-Person) !karma DoesNotExist
+Person) @Popple karma DoesNotExist
 Popple) DoesNotExist has 0 karma.
 ```
 
 The above could be combined into one command like so:
 
 ```txt
-Person) !karma Popple DoesNotExist
+Person) @Popple karma Popple DoesNotExist
 Popple) Popple has 3 karma. DoesNotExist has 0 karma.
 ```
+
+By default, Popple will announce a subject's karma level after it is modified.
+This behavior can be disabled. Karma levels may still be checked with the
+`karma` command.
+
+```txt
+Person) @Popple announce off
+Person) Person++
+
+*crickets*
+```
+
+Or
+
+```txt
+Person) @Popple announce no
+Person) Person++
+
+*crickets)
+```
+
+It can be turned back on with `@Popple announce yes` or
+`@Popple announce on`.
 
 ## Deploying
 
