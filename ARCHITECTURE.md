@@ -1,1 +1,1 @@
-![](./doc/popple-architecture.svg)
+![](./doc/diagram/popple-architecture.svg)
