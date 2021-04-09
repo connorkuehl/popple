@@ -1,0 +1,1 @@
+![](./doc/popple-architecture.svg)
