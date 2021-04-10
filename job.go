@@ -25,6 +25,7 @@ func doWork(job *Job, db *gorm.DB) {
 		hasArgs bool
 	}{
 		{"announce", SetAnnounce, true},
+		{"help", SendHelp, false},
 		{"karma", CheckKarma, true},
 	}
 

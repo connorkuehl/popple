@@ -68,6 +68,16 @@ func SetAnnounce(ctx *Context) {
 	// s.MessageReactionAdd(m.ChannelID, m.ID, "")
 }
 
+func SendHelp(ctx *Context) {
+	m := ctx.Job.Message
+	reply := "Usage: https://github.com/connorkuehl/popple#usage"
+
+	_, err := ctx.Job.Session.ChannelMessageSend(m.ChannelID, reply)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error sending message: %s", err)
+	}
+}
+
 func ModKarma(ctx *Context) {
 	db := ctx.DB
 	s := ctx.Job.Session
