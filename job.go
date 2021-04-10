@@ -20,16 +20,22 @@ func doWork(job *Job, db *gorm.DB) {
 
 	myUser := "@" + job.Session.State.User.Username
 	cmds := []struct {
-		verb string
-		call func(*Context)
+		verb    string
+		call    func(*Context)
+		hasArgs bool
 	}{
-		{"announce", SetAnnounce},
-		{"karma", CheckKarma},
+		{"announce", SetAnnounce, true},
+		{"karma", CheckKarma, true},
 	}
 
 	msg := job.Message.ContentWithMentionsReplaced()
 	for _, c := range cmds {
-		header := fmt.Sprintf("%s %s ", myUser, c.verb)
+		spacer := ""
+		if c.hasArgs {
+			spacer = " "
+		}
+
+		header := fmt.Sprintf("%s %s%s", myUser, c.verb, spacer)
 		if strings.HasPrefix(msg, header) {
 			c.call(&Context{job, db, header})
 			return
