@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"gorm.io/gorm"
@@ -121,5 +122,41 @@ func ModKarma(ctx *Context) {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error when sending reply to channel: %s\n", err)
 		}
+	}
+}
+
+func Top(ctx *Context) {
+	s := ctx.Job.Session
+	m := ctx.Job.Message
+	db := ctx.DB
+
+	limit := 10
+
+	message := ctx.Job.Message.ContentWithMentionsReplaced()[len(ctx.Header):]
+	parts := strings.Fields(message)
+	if len(parts) > 0 {
+		limitArg, err := strconv.Atoi(parts[0])
+		if err == nil && limitArg > 0 {
+			limit = limitArg
+		}
+	}
+
+	var entities []Entity
+	db.Where(&Entity{GuildID: m.GuildID}).Limit(limit).Order("karma desc").Find(&entities)
+
+	board := strings.Builder{}
+	board.WriteString("```")
+	for i := 0; i < len(entities); i++ {
+		board.WriteString(fmt.Sprintf("%d\t%s\n", entities[i].Karma, entities[i].Name))
+	}
+	board.WriteString("```")
+
+	if len(entities) == 0 {
+		return
+	}
+
+	_, err := s.ChannelMessageSend(m.ChannelID, board.String())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error sending message to channel: %s\n", err)
 	}
 }
