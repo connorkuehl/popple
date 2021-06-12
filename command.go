@@ -79,6 +79,14 @@ func SendHelp(ctx *Context) {
 	}
 }
 
+func SendVersion(ctx *Context) {
+	m := ctx.Job.Message
+	_, err := ctx.Job.Session.ChannelMessageSend(m.ChannelID, version)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error sending version: %s", err)
+	}
+}
+
 func ModKarma(ctx *Context) {
 	db := ctx.DB
 	s := ctx.Job.Session

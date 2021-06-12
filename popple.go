@@ -19,6 +19,12 @@ const DEFAULT_WORKERS uint = 4
 const DEFAULT_JOBS uint = 128
 
 func main() {
+
+	if len(os.Args) >= 2 && (os.Args[1] == "version") {
+		fmt.Printf("Popple version : %s", version)
+		os.Exit(0)
+	}
+
 	tokenFile := flag.String("token", "", "path to file containing bot token")
 	numWorkers := flag.Uint("workers", DEFAULT_WORKERS, "Number of worker threads to spawn")
 	dbFile := flag.String("db", DATABASE, "Path to database file")
