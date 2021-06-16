@@ -28,6 +28,7 @@ func doWork(job *Job, db *gorm.DB) {
 		{"help", SendHelp, false},
 		{"karma", CheckKarma, true},
 		{"top", Top, false},
+		{"version", SendVersion, false},
 	}
 
 	msg := job.Message.ContentWithMentionsReplaced()

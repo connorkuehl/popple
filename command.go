@@ -81,7 +81,7 @@ func SendHelp(ctx *Context) {
 
 func SendVersion(ctx *Context) {
 	m := ctx.Job.Message
-	_, err := ctx.Job.Session.ChannelMessageSend(m.ChannelID, version)
+	_, err := ctx.Job.Session.ChannelMessageSend(m.ChannelID, Version)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error sending version: %s", err)
 	}

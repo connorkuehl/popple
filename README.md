@@ -39,6 +39,7 @@ to better suit your needs.
 | @Popple announce | on, off, yes, no | Whether or not Popple will print a subject's karma level after it has been modified |
 | @Popple karma | Something with karma | Prints the subjects' karma level. Multiple subjects' karma levels may be checked |
 | @Popple top | Integer > 0 | Prints the top `n` subjects with the most karma. The default value is `10` if a value is not supplied |
+| @Popple version | String | Prints Popple Version |
 | Subject++ | N/A | Increases Subject's karma |
 | Subject-- | N/A | Decreases Subject's karma |
 | (Subject with space or - +) | N/A | Parentheses may be used for complicated subjects with whitespace or special symbols |
