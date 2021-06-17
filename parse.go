@@ -5,139 +5,186 @@ import (
 	"unicode"
 )
 
-func parseKarma(reader *strings.Reader) int {
-	var err error
-	net := 0
+type Subject struct {
+	Name  string
+	Karma int
+}
 
-	ch, _, err := reader.ReadRune()
-	for err == nil && (ch == '+' || ch == '-') {
-		next, _, err := reader.ReadRune()
-		if err == nil {
-			if ch == '+' && next == '+' {
-				net++
+func ParseSubjects(s string) []Subject {
+	subjects := make([]Subject, 0)
+	var sub Subject
+	var ok bool
+	var remaining []rune
+
+	remaining = []rune(s)
+	for len(remaining) > 0 {
+		sub, ok, remaining = tryParseSubject(remaining)
+		if !ok || sub.Karma == 0 {
+			continue
+		}
+		subjects = append(subjects, sub)
+	}
+	return subjects
+}
+
+func tryParseSubject(rs []rune) (Subject, bool, []rune) {
+	remaining := seekSubjectStart(rs)
+	/* in case an unclosed backtick forced the search to
+	 * deplete the input stream, backtrack and try again,
+	 * skipping over the unclosed backtick
+	 */
+	if len(remaining) == 0 {
+		/* don't backtrack if the input was legitimately
+		   completely consumed */
+		if len(rs) > 1 && rs[0] == '`' && rs[len(rs)-1] == '`' {
+			return Subject{}, false, []rune{}
+		}
+		return Subject{}, false, rs[1:]
+	}
+
+	var sub Subject
+	var ok bool
+
+	if remaining[0] == '(' {
+		sub, ok, remaining = tryParseParens(remaining)
+		/* if the parenthesis is not matched, the input
+		 * stream will get depleted, so backtrack and try
+		 * again, this time skipping over the opening paren
+		 */
+		if len(remaining) == 0 {
+			return Subject{}, false, seekSubjectStart(rs[1:])
+		}
+	} else {
+		sub, ok, remaining = tryParsePlain(remaining)
+	}
+
+	return sub, ok, remaining
+}
+
+type seekState int
+
+const (
+	seekingTick seekState = iota
+	seekingWhitespace
+	seekingStart
+)
+
+func seekSubjectStart(rs []rune) []rune {
+	state := seekingStart
+	start := 0
+	for _, r := range rs {
+		switch state {
+		case seekingStart:
+			if r != '`' && !unicode.IsSpace(r) {
+				return rs[start:]
 			}
-			if ch == '-' && next == '-' {
-				net--
+			if r == '`' {
+				state = seekingTick
+			}
+		case seekingTick:
+			if r == '`' {
+				state = seekingWhitespace
+			}
+		case seekingWhitespace:
+			if unicode.IsSpace(r) {
+				state = seekingStart
+			}
+			if r == '`' {
+				state = seekingTick
 			}
 		}
-
-		ch, _, err = reader.ReadRune()
+		start++
 	}
-
-	return net
+	return rs[start:]
 }
 
-func parseSubjectTilWhitespaceOrKarma(reader *strings.Reader) (string, bool) {
-	subj := strings.Builder{}
-	ch, _, err := reader.ReadRune()
-
-	if err == nil && ch == '@' {
-		ch, _, err = reader.ReadRune()
-	}
-
-	shouldStop := func(r rune) bool {
-		return r == '+' || r == '-' || unicode.IsSpace(r)
-	}
-
-	for err == nil && !shouldStop(ch) {
-		subj.WriteRune(ch)
-		ch, _, err = reader.ReadRune()
-	}
-
-	if shouldStop(ch) {
-		// Put back the character we took off that caused us to stop
-		_ = reader.UnreadRune()
-	}
-
-	s := subj.String()
-
-	return s, len(s) > 0
-}
-
-func parseSubjectInParens(reader *strings.Reader) (string, bool) {
-	subj := strings.Builder{}
-
-	ch, _, err := reader.ReadRune()
-	if err != nil || ch != '(' {
-		return "", false
-	}
-
+func tryParseParens(rs []rune) (Subject, bool, []rune) {
 	open := 1
-
-	ch, _, err = reader.ReadRune()
-	for err == nil {
-		if ch == '(' {
+	start := 1
+	end := 1
+	for _, r := range rs[start:] {
+		if r == '(' {
 			open++
 		}
-		if ch == ')' {
+		if r == ')' {
 			open--
 		}
-
 		if open == 0 {
 			break
 		}
-
-		subj.WriteRune(ch)
-		ch, _, err = reader.ReadRune()
+		end++
 	}
 
 	if open != 0 {
-		return "", false
+		return Subject{}, false, rs[start:]
 	}
 
-	s := subj.String()
-
-	return s, len(s) > 0
-}
-
-func parseModifier(reader *strings.Reader) (string, int, bool) {
-	var subj string
-	ok := false
-
-	ch, _, err := reader.ReadRune()
-	if err != nil {
-		return "", 0, false
+	/* depleted the input stream early, was expecting a ++ or --
+	 * at the end
+	 */
+	if len(rs) == end {
+		return Subject{}, true, rs[end:]
 	}
 
-	// safe because this is 1 unread for 1 read
-	_ = reader.UnreadRune()
+	name := string(rs[start:end])
 
-	if ch == '(' {
-		subj, ok = parseSubjectInParens(reader)
-	} else {
-		subj, ok = parseSubjectTilWhitespaceOrKarma(reader)
-	}
+	karmaStart := end + 1       // index of the first + or -
+	karmaEnd := karmaStart + 1  // index of the second + or -
+	expectSpace := karmaEnd + 1 // index where whitespace is expected or eof
 
-	karma := parseKarma(reader)
+	/* a valid subject will have whitespace after the ++/-- OR
+	 * the ++/-- is the end of the input stream
+	 */
+	sepBySpace := len(rs) > expectSpace && unicode.IsSpace(rs[expectSpace])
+	eof := len(rs)-1 == karmaEnd
 
-	return subj, karma, ok
-}
-
-func ParseModifiers(s string) map[string]int {
-	var err error
-
-	subjects := make(map[string]int)
-
-	reader := strings.NewReader(s)
-	for err == nil {
-		ch, _, err := reader.ReadRune()
-		// end of string, all done
-		if err != nil {
-			break
-		}
-
-		if !unicode.IsSpace(ch) {
-			// Safe because this is 1 unread for 1 read
-			_ = reader.UnreadRune()
-
-			subj, karma, ok := parseModifier(reader)
-			if !ok {
-				continue
+	if sepBySpace || eof {
+		if rs[karmaStart] == rs[karmaEnd] {
+			var karma int
+			switch rs[karmaStart] {
+			case '+':
+				karma = 1
+			case '-':
+				karma = -1
 			}
 
-			subjects[subj] += karma
+			sub := Subject{}
+			if len(name) > 0 && karma != 0 {
+				sub.Name = name
+				sub.Karma = karma
+			}
+			return sub, true, rs[karmaEnd:]
 		}
 	}
 
-	return subjects
+	return Subject{}, true, rs[end:]
+}
+
+func tryParsePlain(rs []rune) (Subject, bool, []rune) {
+	end := 0
+	for _, r := range rs {
+		if unicode.IsSpace(r) || r == '`' {
+			break
+		}
+		end++
+	}
+
+	var sub Subject
+	raw := string(rs[:end])
+	separated := (end < len(rs) && unicode.IsSpace(rs[end])) || len(rs) == end
+
+	/* length check is to avoid parsing "++" as {"", 1} */
+	if separated && len(raw) > 2 {
+		if strings.HasSuffix(raw, "++") {
+			sub.Karma = 1
+		} else if strings.HasSuffix(raw, "--") {
+			sub.Karma = -1
+		}
+		if sub.Karma != 0 {
+			sub.Name = raw[:len(raw)-2]
+		}
+		return sub, true, rs[end:]
+	}
+	sub.Name = raw
+	return sub, true, rs[end:]
 }
