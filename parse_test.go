@@ -3,145 +3,45 @@ package main
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 )
 
-func TestParseKarma(t *testing.T) {
+func TestParseSubjects(t *testing.T) {
 	var tests = []struct {
+		name  string
 		input string
-		want  int
+		want  []Subject
 	}{
-		{"++", 1},
-		{"--", -1},
-		{"+++", 1},
-		{"++--", 0},
-		{"++++++", 3},
-		{"++++a++", 2},
-		{"+a", 0},
-		{"", 0},
-		{"--a++", -1},
+		{"incrementing a plain subject adds 1 karma", "Test++", []Subject{{"Test", 1}}},
+		{"decrementing a plain subject subtracts 1 karma", "Test--", []Subject{{"Test", -1}}},
+		{"complicated subjects can be enclosed in parentheses", "(Complicated Karma)--", []Subject{{"Complicated Karma", -1}}},
+		{"a subject's name may include parentheses if nested in outer parentheses", "((Nested) (sub)(ject))++", []Subject{{"(Nested) (sub)(ject)", 1}}},
+		{"empty parentheses results in nothing", "()", []Subject{}},
+		{"leading whitespace is discarded", "   Some Spaces++", []Subject{{"Spaces", 1}}},
+		{"an unclosed parentheses does not prevent parsing other subjects", "(unmatched hello++", []Subject{{"hello", 1}}},
+		{"a karma event must be followed by whitespace or eof", "no++karma", []Subject{}},
+		{"a karma event can be parsed from non-karma events", "yes-- karma", []Subject{{"yes", -1}}},
+		{"plain and parentheses-style subjects can be mixed", "A number++ of (subjects with karma)--", []Subject{{"number", 1}, {"subjects with karma", -1}}},
+		{"incrementing nothing yields nothing", "++a", []Subject{}},
+		{"a karma event cannot be suffixed with a backtick", "hi++`", []Subject{}},
+		{"code fences are ignored during parsing", "```code fence``` test++", []Subject{{"test", 1}}},
+		{"a single parenthesis yields nothing", "(", []Subject{}},
+		{"a parenthesis subject without a karma event yields nothing", "(nothing) (something)++", []Subject{{"something", 1}}},
+		{"no karma events results in no subjects", "hi goodbye farewell ", []Subject{}},
+		{"a karma event is a valid subject", "++++", []Subject{{"++", 1}}},
+		{"empty input yields no subjects", "", []Subject{}},
+		{"karma events inside backticks are ignored", "```c++```", []Subject{}},
+		{"an increment yields nothing", "++ -- ", []Subject{}},
+		{"bumping empty parens yields nothing", "()++ ()--", []Subject{}},
+		{"karma events inside of backticks should be ignored", "`all++ of-- this++ should-- be++ ignored--`", []Subject{}},
+		{"parser will backtrace if tick is not closed", "`c test++", []Subject{{"test", 1}}},
+		{"karma events inside of fences should be ignored", "``` test++ ```", []Subject{}},
 	}
 
 	for _, tt := range tests {
-		testname := fmt.Sprintf("%s,%d", tt.input, tt.want)
-		t.Run(testname, func(t *testing.T) {
-			actual := parseKarma(strings.NewReader(tt.input))
-			if actual != tt.want {
-				t.Errorf("got %d, want %d", actual, tt.want)
-			}
-		})
-	}
-}
-
-func TestParseSubjectTilWhitespaceOrKarma(t *testing.T) {
-	var tests = []struct {
-		input string
-		want  string
-	}{
-		{"PoeThePotatoPirate", "PoeThePotatoPirate"},
-		{"Poe++", "Poe"},
-		{"Poe++Hello", "Poe"},
-		{"Po-e", "Po"},
-		{"Hello World", "Hello"},
-		{"@Poe", "Poe"},
-	}
-
-	for _, tt := range tests {
-		testname := fmt.Sprintf("%s,%s", tt.input, tt.want)
-		t.Run(testname, func(t *testing.T) {
-			actual, _ := parseSubjectTilWhitespaceOrKarma(strings.NewReader(tt.input))
-			if actual != tt.want {
-				t.Errorf("got %s, want %s", actual, tt.want)
-			}
-		})
-	}
-}
-
-func TestParseSubjectInParens(t *testing.T) {
-	var tests = []struct {
-		input string
-		want  string
-		wOk   bool
-	}{
-		{"(Poe the Potato Pirate)", "Poe the Potato Pirate", true},
-		{"(Poe the Potato Pirate", "", false},
-		{"()", "", false},
-		{"(Poe the Potato Pirate)++", "Poe the Potato Pirate", true},
-		{"(Poe the Potato Pirate++)", "Poe the Potato Pirate++", true},
-		{"", "", false},
-		{"Poe the Potato Pirate", "", false},
-		{"((Poe the) (Potato Pirate))", "(Poe the) (Potato Pirate)", true},
-	}
-
-	for _, tt := range tests {
-		testname := fmt.Sprintf("%s,%s/%v", tt.input, tt.want, tt.wOk)
-		t.Run(testname, func(t *testing.T) {
-			actual, ok := parseSubjectInParens(strings.NewReader(tt.input))
-			if actual != tt.want || ok != tt.wOk {
-				t.Errorf("got %s/%v, want %s/%v", actual, ok, tt.want, tt.wOk)
-			}
-		})
-	}
-}
-
-func TestParseModifier(t *testing.T) {
-	var tests = []struct {
-		input       string
-		wantSubject string
-		wantKarma   int
-		wantOk      bool
-	}{
-		{"(Poe)++", "Poe", 1, true},
-		{"Poe++", "Poe", 1, true},
-		{"(Poe the Potato Pirate)++--a++", "Poe the Potato Pirate", 0, true},
-		{"(Hello World++234", "", 0, false},
-	}
-
-	for _, tt := range tests {
-		testname := fmt.Sprintf("%s,%s/%d,%v", tt.input, tt.wantSubject, tt.wantKarma, tt.wantOk)
-		t.Run(testname, func(t *testing.T) {
-			s, k, ok := parseModifier(strings.NewReader(tt.input))
-			if s != tt.wantSubject || k != tt.wantKarma || ok != tt.wantOk {
-				t.Errorf("got %s/%d,%v, want %s/%d,%v", s, k, ok, tt.wantSubject, tt.wantKarma, tt.wantOk)
-			}
-		})
-	}
-}
-
-func TestParseModifiers(t *testing.T) {
-	var tests = []struct {
-		input string
-		want  map[string]int
-	}{
-		{"Poe++", map[string]int{
-			"Poe": 1,
-		}},
-		{"None of this, except++", map[string]int{
-			"None":   0,
-			"except": 1,
-			"of":     0,
-			"this,":  0,
-		}},
-		{"       hi++", map[string]int{
-			"hi": 1,
-		}},
-		{"     hello    world--         bye----", map[string]int{
-			"hello": 0,
-			"world": -1,
-			"bye":   -2,
-		}},
-		{"         (Poe the Potato Pirate)++++    foo--++          bar++", map[string]int{
-			"Poe the Potato Pirate": 2,
-			"foo":                   0,
-			"bar":                   1,
-		}},
-	}
-
-	for _, tt := range tests {
-		testname := fmt.Sprintf("%s,%v", tt.input, tt.want)
-		t.Run(testname, func(t *testing.T) {
-			actual := ParseModifiers(tt.input)
+		testName := fmt.Sprintf("%s %s,%v", tt.name, tt.input, tt.want)
+		t.Run(testName, func(t *testing.T) {
+			actual := ParseSubjects(tt.input)
 			if !reflect.DeepEqual(actual, tt.want) {
 				t.Errorf("got %v, want %v", actual, tt.want)
 			}

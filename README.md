@@ -55,18 +55,10 @@ Person) Thanks for being so neat, Popple++!
 Popple) Popple has 1 karma.
 ```
 
-You can tack on as many `++` or `--` onto the end of a subject as you want and
-Popple will count them out and calculate the "net karma" from that operation.
+Popple will ignore "net-zero" operations on karma.
 
 ```txt
-Person) Popple++--++--++++
-Popple) Popple has 2 karma.
-```
-
-Popple won't react to karma events that net to zero:
-
-```txt
-Person) Popple++--
+Person) Popple++ Popple--
 
 *crickets*
 ```
@@ -74,12 +66,12 @@ Person) Popple++--
 A message can have any number of karma events for any number of subjects:
 
 ```txt
-Person) PoeThePotatoPirate++++ Popple--++++ HelloWorld----
+Person) PoeThePotatoPirate++ Popple-- HelloWorld--
 Popple) PoeThePotatoPirate has 2 karma. Popple has 3 karma. HelloWorld has -2 karma.
 ```
 
 Parentheses may be used for more complicated karma subjects, including those
-with whitespace or even `+` or `-` in their names.
+with whitespace, ticks, or other parentheses in their name.
 
 ```txt
 Person) (Poe the Potato Pirate)++ (meme-bot)++
@@ -119,7 +111,7 @@ Or
 Person) @Popple announce no
 Person) Person++
 
-*crickets)
+*crickets*
 ```
 
 It can be turned back on with `@Popple announce yes` or

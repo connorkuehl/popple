@@ -23,11 +23,11 @@ func CheckKarma(ctx *Context) {
 	guildID := m.GuildID
 
 	message := m.ContentWithMentionsReplaced()[len(ctx.Header):]
-	modifiers := ParseModifiers(message)
+	subjects := marshalSubjects(ParseSubjects(message))
 
 	reply := strings.Builder{}
 
-	for subject, _ := range modifiers {
+	for subject, _ := range subjects {
 		var entity Entity
 		db.Where(&Entity{GuildID: guildID, Name: subject}).First(&entity)
 		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, subject, entity.Karma))
@@ -94,7 +94,7 @@ func ModKarma(ctx *Context) {
 	guildID := m.GuildID
 
 	message := m.ContentWithMentionsReplaced()
-	modifiers := ParseModifiers(message)
+	modifiers := marshalSubjects(ParseSubjects(message))
 
 	reply := strings.Builder{}
 
@@ -167,4 +167,20 @@ func Top(ctx *Context) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error sending message to channel: %s\n", err)
 	}
+}
+
+func marshalSubjects(subs []Subject) map[string]int {
+	subMap := make(map[string]int)
+	for _, s := range subs {
+		/* associate @user with user */
+		name := s.Name
+		if len(name) > 1 && name[0] == '@' {
+			name = name[1:]
+		}
+		karma := subMap[name]
+		karma += s.Karma
+		subMap[name] = karma
+	}
+
+	return subMap
 }
