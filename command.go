@@ -133,7 +133,15 @@ func ModKarma(ctx *Context) {
 	}
 }
 
+func Bot(ctx *Context) {
+	board(ctx, "asc")
+}
+
 func Top(ctx *Context) {
+	board(ctx, "desc")
+}
+
+func board(ctx *Context, sort string) {
 	s := ctx.Job.Session
 	m := ctx.Job.Message
 	db := ctx.DB
@@ -150,7 +158,7 @@ func Top(ctx *Context) {
 	}
 
 	var entities []Entity
-	db.Where(&Entity{GuildID: m.GuildID}).Limit(limit).Order("karma desc").Find(&entities)
+	db.Where(&Entity{GuildID: m.GuildID}).Order(fmt.Sprintf("karma %s", sort)).Limit(limit).Find(&entities)
 
 	board := strings.Builder{}
 	for _, entity := range entities {
