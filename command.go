@@ -153,14 +153,8 @@ func Top(ctx *Context) {
 	db.Where(&Entity{GuildID: m.GuildID}).Limit(limit).Order("karma desc").Find(&entities)
 
 	board := strings.Builder{}
-	board.WriteString("```")
-	for i := 0; i < len(entities); i++ {
-		board.WriteString(fmt.Sprintf("%d\t%s\n", entities[i].Karma, entities[i].Name))
-	}
-	board.WriteString("```")
-
-	if len(entities) == 0 {
-		return
+	for _, entity := range entities {
+		board.WriteString(fmt.Sprintf("* %s (%d karma)\n", entity.Name, entity.Karma))
 	}
 
 	_, err := s.ChannelMessageSend(m.ChannelID, board.String())
