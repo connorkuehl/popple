@@ -1,3 +1,4 @@
+// Popple counts karma for your Discord server.
 package main
 
 import (
@@ -14,8 +15,20 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+// DATABASE is the SQLite file that Popple will use if one is not provided.
+//
+// This file is relative to the Popple process's current working directory.
 const DATABASE string = "popple.sqlite"
+
+// DEFAULT_WORKERS is the default number of goroutines that will be spun up
+// if not overridden on the command line.
 const DEFAULT_WORKERS uint = 4
+
+// DEFAULT_JOBS is the maximum number of pending jobs that will be held before
+// new jobs start getting dropped.
+//
+// As far as Popple is concerned, a "job" is a pending Discord message that
+// Popple must process to determine how it will act (or not act).
 const DEFAULT_JOBS uint = 128
 
 func main() {
