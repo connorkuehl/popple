@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -26,8 +26,7 @@ func main() {
 	flag.Parse()
 
 	if *tokenFile == "" {
-		fmt.Fprintf(os.Stderr, "Token file must be supplied as a command line argument")
-		os.Exit(1)
+		log.Fatalln("Token file must be supplied as a command line argument")
 	}
 
 	if *numWorkers < 1 {
@@ -41,14 +40,12 @@ func main() {
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to open database: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Failed to open database: %s\n", err)
 	}
 
 	token, err := ioutil.ReadFile(*tokenFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to read token from %s\n", *tokenFile)
-		os.Exit(1)
+		log.Fatalf("Failed to read token from %s\n", *tokenFile)
 	}
 
 	db.AutoMigrate(&Config{})
@@ -56,8 +53,7 @@ func main() {
 
 	session, err := discordgo.New("Bot " + string(token))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to initialize Discord library: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Failed to initialize Discord library: %s\n", err)
 	}
 
 	cancel := make(chan struct{})
@@ -71,20 +67,19 @@ func main() {
 		select {
 		case workQueue <- Job{s, m}:
 		default:
-			fmt.Fprintf(os.Stderr, "Warning: job queue capacity depleted; dropping incoming job\n")
+			log.Println("Warning: job queue capacity depleted; dropping incoming job")
 		}
 	})
 
 	err = session.Open()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error connecting to Discord: %s\n", err)
 		/* Should these be `defer`red? */
 		close(cancel)
 		close(workQueue)
-		os.Exit(1)
+		log.Fatalf("Error connecting to Discord: %s\n", err)
 	}
 
-	fmt.Println("Popple is online")
+	log.Println("Popple is online")
 
 	session_channel := make(chan os.Signal, 1)
 	signal.Notify(session_channel, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
