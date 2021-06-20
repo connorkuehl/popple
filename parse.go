@@ -1,15 +1,34 @@
 package main
 
+// Module parse (unsurprisingly) parses karma subjects from text.
+//
+// A karma subject is an entity whose karma is either incremented
+// or decremented.
+//
+// A valid subject could be a word containing any kinds of characters
+// (except a backtick `) ending in either a `++`` or a `--``.
+//
+// Example: HelloWorld++ -> subject name: HelloWorld +1 karma
+// Example: Good`Bye++ -> subject name: Bye +1 karma (note that
+// the backtick excluded the first part of the word from the subject)
+//
+// Subjects can contain whitespace or any other characters if they are
+// enclosed in parentheses.
+//
+// Example: (Hello World)-- -> subject name: Hello World -1 karma
+
 import (
 	"strings"
 	"unicode"
 )
 
+// Subject represents a karma operation on a named entity.
 type Subject struct {
 	Name  string
 	Karma int
 }
 
+// ParseSubjects parses subjects from text.
 func ParseSubjects(s string) []Subject {
 	subjects := make([]Subject, 0)
 	var sub Subject
@@ -27,6 +46,20 @@ func ParseSubjects(s string) []Subject {
 	return subjects
 }
 
+// tryParseSubject is the general entrypoint for parsing subjects
+// from text.
+//
+// This function, and all of the functions that it calls, work by
+// taking as input the text "input stream". Regardless of whether
+// it is successful (i.e., it returns a Subject object and the
+// returned 'ok' bool is true), it will also return the *remaining*
+// input stream that it did not consume to produce the subject.
+//
+// This mechanism is helpful as it allows callers to loop over this
+// function as if it were an iterator. The other benefit to this
+// "consume-and-return-the-remainder" approach is that it allows
+// the parser to "backtrack" in case it consumed the entire input
+// looking for a matching backtick or closing parenthesis.
 func tryParseSubject(rs []rune) (Subject, bool, []rune) {
 	remaining := seekSubjectStart(rs)
 	/* in case an unclosed backtick forced the search to
@@ -69,6 +102,9 @@ const (
 	seekingStart
 )
 
+// seekSubjectStart discards any irrelevant items in the
+// input stream so that the input stream points to a possible
+// karma subject.
 func seekSubjectStart(rs []rune) []rune {
 	state := seekingStart
 	start := 0
@@ -98,6 +134,11 @@ func seekSubjectStart(rs []rune) []rune {
 	return rs[start:]
 }
 
+// tryParseParens is called when the first character in the
+// input stream is an opening parenthesis. It will read
+// everything until the parenthesis is closed. Once closed,
+// it will attempt to read the karma increment or decrement
+// following the closing parenthesis.
 func tryParseParens(rs []rune) (Subject, bool, []rune) {
 	open := 1
 	start := 1
@@ -160,6 +201,9 @@ func tryParseParens(rs []rune) (Subject, bool, []rune) {
 	return Subject{}, true, rs[end:]
 }
 
+// tryParsePlain is a catch-all parser. It will essentially read
+// until it encounters whitespace and then check if the last two
+// characters are a karma operation.
 func tryParsePlain(rs []rune) (Subject, bool, []rune) {
 	end := 0
 	for _, r := range rs {
