@@ -1,4 +1,4 @@
 package main
 
 // Indicates Popple version
-const Version = "1.1.0+dev"
+const Version = "2.0.0-rc1"
