@@ -42,6 +42,7 @@ func CheckKarma(ctx *Context) {
 
 func SetAnnounce(ctx *Context) {
 	db := ctx.DB
+	s := ctx.Job.Session
 	m := ctx.Job.Message
 	guildID := m.GuildID
 
@@ -53,9 +54,10 @@ func SetAnnounce(ctx *Context) {
 	} else if strings.HasPrefix(message, "off") || strings.HasPrefix(message, "no") {
 		on = false
 	} else {
-		// FIXME: I don't know exactly what an "emojiID" is, but I'd like
-		// to react with a ? emoji.
-		// s.MessageReactionAdd(m.ChannelID, m.ID, "")
+		_, err := s.ChannelMessageSendReply(m.ChannelID, "Announce settings are: \"yes\", \"no\", \"on\", \"off\"", m.MessageReference)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error when sending reply: %v", err)
+		}
 		return
 	}
 
@@ -64,9 +66,10 @@ func SetAnnounce(ctx *Context) {
 	cfg.NoAnnounce = !on
 	db.Save(cfg)
 
-	// FIXME: I don't know what an emojiID is supposed to be, but it'd be cool
-	// to react with a thumbs up.
-	// s.MessageReactionAdd(m.ChannelID, m.ID, "")
+	err := s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when sending reply: %v", err)
+	}
 }
 
 func SendHelp(ctx *Context) {
