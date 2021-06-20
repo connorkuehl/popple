@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"log"
 	"strconv"
 	"strings"
 
@@ -36,7 +36,7 @@ func CheckKarma(ctx *Context) {
 
 	_, err := s.ChannelMessageSend(m.ChannelID, reply.String())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error when sending reply to channel: %s\n", err)
+		log.Printf("Error when sending reply to channel: %s\n", err)
 	}
 }
 
@@ -56,7 +56,7 @@ func SetAnnounce(ctx *Context) {
 	} else {
 		_, err := s.ChannelMessageSendReply(m.ChannelID, "Announce settings are: \"yes\", \"no\", \"on\", \"off\"", m.MessageReference)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error when sending reply: %v", err)
+			log.Printf("Error when sending reply: %v", err)
 		}
 		return
 	}
@@ -68,7 +68,7 @@ func SetAnnounce(ctx *Context) {
 
 	err := s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error when sending reply: %v", err)
+		log.Printf("Error when sending reply: %v", err)
 	}
 }
 
@@ -78,7 +78,7 @@ func SendHelp(ctx *Context) {
 
 	_, err := ctx.Job.Session.ChannelMessageSend(m.ChannelID, reply)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error sending message: %s", err)
+		log.Printf("Error sending message: %s", err)
 	}
 }
 
@@ -86,7 +86,7 @@ func SendVersion(ctx *Context) {
 	m := ctx.Job.Message
 	_, err := ctx.Job.Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("I'm running version %s.", Version))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error sending version: %s", err)
+		log.Printf("Error sending version: %s", err)
 	}
 }
 
@@ -131,7 +131,7 @@ func ModKarma(ctx *Context) {
 	if !cfg.NoAnnounce {
 		_, err := s.ChannelMessageSend(m.ChannelID, reply.String())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error when sending reply to channel: %s\n", err)
+			log.Printf("Error when sending reply to channel: %s\n", err)
 		}
 	}
 }
@@ -170,7 +170,7 @@ func board(ctx *Context, sort string) {
 
 	_, err := s.ChannelMessageSend(m.ChannelID, board.String())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error sending message to channel: %s\n", err)
+		log.Printf("Error sending message to channel: %s\n", err)
 	}
 }
 
