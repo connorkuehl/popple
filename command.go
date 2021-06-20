@@ -1,5 +1,12 @@
 package main
 
+// Module command contains all of the business logic associated
+// with the Popple bot and its behaviors.
+//
+// The routing information for what text commands are wired to
+// which function are currently represented in the command
+// dispatch table in job.go
+
 import (
 	"fmt"
 	"log"
@@ -9,12 +16,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// Context represents all of the necessary state and session
+// functionality for the Popple bot to perform its commands
+// and to interact with the Discord channels that it is in.
 type Context struct {
 	Job    *Job
 	DB     *gorm.DB
 	Header string
 }
 
+// CheckKarma allows server inhabitants to query karma levels
+// for subjects they have incremented or decremented over time.
 func CheckKarma(ctx *Context) {
 	var sep string
 	db := ctx.DB
@@ -40,6 +52,8 @@ func CheckKarma(ctx *Context) {
 	}
 }
 
+// SetAnnounce allows server inhabitants to enable or disable Popple
+// announcements when karma is modified from a message.
 func SetAnnounce(ctx *Context) {
 	db := ctx.DB
 	s := ctx.Job.Session
@@ -72,6 +86,7 @@ func SetAnnounce(ctx *Context) {
 	}
 }
 
+// SendHelp allows server inhabitants to request usage information.
 func SendHelp(ctx *Context) {
 	m := ctx.Job.Message
 	reply := "Usage: https://github.com/connorkuehl/popple#usage"
@@ -82,6 +97,8 @@ func SendHelp(ctx *Context) {
 	}
 }
 
+// SendVersion allows server inhabitants to see what Popple revision
+// is running.
 func SendVersion(ctx *Context) {
 	m := ctx.Job.Message
 	_, err := ctx.Job.Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("I'm running version %s.", Version))
@@ -90,6 +107,12 @@ func SendVersion(ctx *Context) {
 	}
 }
 
+// ModKarma is the default Popple action that will be taken when no other
+// subcommand is identified in the message.
+//
+// Popple will scan the entire message, parse out any karma subjects,
+// count up the karma, and reply with the karma modifications that the
+// message has made resulted in.
 func ModKarma(ctx *Context) {
 	db := ctx.DB
 	s := ctx.Job.Session
@@ -136,10 +159,14 @@ func ModKarma(ctx *Context) {
 	}
 }
 
+// Bot allows server inhabitants to see who is "in the lead" for
+// the LEAST amount of karma.
 func Bot(ctx *Context) {
 	board(ctx, "asc")
 }
 
+// Top allows server inhabitants to see who is in the lead in terms
+// of karma accumulated.
 func Top(ctx *Context) {
 	board(ctx, "desc")
 }
@@ -174,6 +201,8 @@ func board(ctx *Context, sort string) {
 	}
 }
 
+// marshalSubjects deduplicates the list of Subjects that ParseSubjects
+// returns.
 func marshalSubjects(subs []Subject) map[string]int {
 	subMap := make(map[string]int)
 	for _, s := range subs {
