@@ -38,7 +38,7 @@ func ParseSubjects(s string) []Subject {
 	remaining = []rune(s)
 	for len(remaining) > 0 {
 		sub, ok, remaining = tryParseSubject(remaining)
-		if !ok || sub.Karma == 0 {
+		if !ok || len(sub.Name) == 0 {
 			continue
 		}
 		subjects = append(subjects, sub)
@@ -84,8 +84,8 @@ func tryParseSubject(rs []rune) (Subject, bool, []rune) {
 		 * stream will get depleted, so backtrack and try
 		 * again, this time skipping over the opening paren
 		 */
-		if len(remaining) == 0 {
-			return Subject{}, false, seekSubjectStart(rs[1:])
+		if len(remaining) == 0 && !ok {
+			return Subject{}, false, rs[1:]
 		}
 	} else {
 		sub, ok, remaining = tryParsePlain(remaining)
@@ -160,14 +160,14 @@ func tryParseParens(rs []rune) (Subject, bool, []rune) {
 		return Subject{}, false, rs[start:]
 	}
 
+	sub := Subject{string(rs[start:end]), 0}
+
 	/* depleted the input stream early, was expecting a ++ or --
 	 * at the end
 	 */
-	if len(rs) == end {
-		return Subject{}, true, rs[end:]
+	if len(rs)-1 == end {
+		return sub, true, []rune{}
 	}
-
-	name := string(rs[start:end])
 
 	karmaStart := end + 1       // index of the first + or -
 	karmaEnd := karmaStart + 1  // index of the second + or -
@@ -180,25 +180,15 @@ func tryParseParens(rs []rune) (Subject, bool, []rune) {
 	eof := len(rs)-1 == karmaEnd
 
 	if sepBySpace || eof {
-		if rs[karmaStart] == rs[karmaEnd] {
-			var karma int
-			switch rs[karmaStart] {
-			case '+':
-				karma = 1
-			case '-':
-				karma = -1
-			}
-
-			sub := Subject{}
-			if len(name) > 0 && karma != 0 {
-				sub.Name = name
-				sub.Karma = karma
-			}
-			return sub, true, rs[karmaEnd:]
+		if rs[karmaStart] == '+' && rs[karmaEnd] == '+' {
+			sub.Karma = 1
+		} else if rs[karmaStart] == '-' && rs[karmaEnd] == '-' {
+			sub.Karma = -1
 		}
+		return sub, true, rs[karmaEnd+1:]
 	}
 
-	return Subject{}, true, rs[end:]
+	return sub, true, rs[end+1:]
 }
 
 // tryParsePlain is a catch-all parser. It will essentially read
@@ -213,22 +203,18 @@ func tryParsePlain(rs []rune) (Subject, bool, []rune) {
 		end++
 	}
 
-	var sub Subject
-	raw := string(rs[:end])
+	sub := Subject{string(rs[:end]), 0}
 	separated := (end < len(rs) && unicode.IsSpace(rs[end])) || len(rs) == end
-
-	/* length check is to avoid parsing "++" as {"", 1} */
-	if separated && len(raw) > 2 {
-		if strings.HasSuffix(raw, "++") {
+	if separated {
+		switch {
+		case strings.HasSuffix(sub.Name, "++"):
 			sub.Karma = 1
-		} else if strings.HasSuffix(raw, "--") {
+		case strings.HasSuffix(sub.Name, "--"):
 			sub.Karma = -1
 		}
 		if sub.Karma != 0 {
-			sub.Name = raw[:len(raw)-2]
+			sub.Name = sub.Name[:len(sub.Name)-2]
 		}
-		return sub, true, rs[end:]
 	}
-	sub.Name = raw
 	return sub, true, rs[end:]
 }
