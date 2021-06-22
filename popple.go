@@ -92,7 +92,7 @@ func main() {
 		log.Fatalf("Error connecting to Discord: %s\n", err)
 	}
 
-	log.Println("Popple is online")
+	log.Printf("Popple is online, running version %s\n", Version)
 
 	session_channel := make(chan os.Signal, 1)
 	signal.Notify(session_channel, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
