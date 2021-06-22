@@ -34,6 +34,10 @@ func CheckKarma(ctx *Context) {
 	m := ctx.Job.Message
 	guildID := m.GuildID
 
+	if len(guildID) == 0 {
+		return
+	}
+
 	message := m.ContentWithMentionsReplaced()[len(ctx.Header):]
 	subjects := marshalSubjects(ParseSubjects(message))
 
@@ -59,6 +63,10 @@ func SetAnnounce(ctx *Context) {
 	s := ctx.Job.Session
 	m := ctx.Job.Message
 	guildID := m.GuildID
+
+	if len(guildID) == 0 {
+		return
+	}
 
 	message := m.ContentWithMentionsReplaced()[len(ctx.Header):]
 
@@ -119,6 +127,10 @@ func ModKarma(ctx *Context) {
 	m := ctx.Job.Message
 	guildID := m.GuildID
 
+	if len(guildID) == 0 {
+		return
+	}
+
 	message := m.ContentWithMentionsReplaced()
 	modifiers := marshalSubjects(ParseSubjects(message))
 
@@ -175,6 +187,10 @@ func board(ctx *Context, sort string) {
 	s := ctx.Job.Session
 	m := ctx.Job.Message
 	db := ctx.DB
+
+	if len(m.GuildID) == 0 {
+		return
+	}
 
 	limit := 10
 
