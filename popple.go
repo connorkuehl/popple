@@ -3,6 +3,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -92,7 +93,8 @@ func main() {
 		log.Fatalf("Error connecting to Discord: %s\n", err)
 	}
 
-	log.Println("Popple is online")
+	startupMessage := fmt.Sprintf("Popple is online, running version %s", Version)
+	log.Println(startupMessage)
 
 	session_channel := make(chan os.Signal, 1)
 	signal.Notify(session_channel, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
