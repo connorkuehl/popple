@@ -94,9 +94,9 @@ func main() {
 
 	log.Printf("Popple is online, running version %s\n", Version)
 
-	session_channel := make(chan os.Signal, 1)
-	signal.Notify(session_channel, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	<-session_channel
+	sessionChannel := make(chan os.Signal, 1)
+	signal.Notify(sessionChannel, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+	<-sessionChannel
 	close(cancel)
 	close(workQueue)
 
