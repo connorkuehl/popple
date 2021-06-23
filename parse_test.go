@@ -23,7 +23,7 @@ func TestParseSubjects(t *testing.T) {
 		{"a karma event can be parsed from non-karma events", "yes-- karma", []Subject{{"yes", -1}, {"karma", 0}}},
 		{"plain and parentheses-style subjects can be mixed", "A number++ of (subjects with karma)--", []Subject{{"A", 0}, {"number", 1}, {"of", 0}, {"subjects with karma", -1}}},
 		{"incrementing nothing yields nothing", "++a", []Subject{{"++a", 0}}},
-		{"a karma event cannot be suffixed with a backtick", "hi++`", []Subject{{"hi++", 0}}},
+		{"a karma event cannot be suffixed with a backtick", "hi++`", []Subject{{"hi++`", 0}}},
 		{"code fences are ignored during parsing", "```code fence``` test++", []Subject{{"test", 1}}},
 		{"a parenthesis subject without a karma event yields nothing", "(nothing) (something)++", []Subject{{"nothing", 0}, {"something", 1}}},
 		{"no karma events results in no subjects", "hi goodbye farewell ", []Subject{{"hi", 0}, {"goodbye", 0}, {"farewell", 0}}},
@@ -31,10 +31,11 @@ func TestParseSubjects(t *testing.T) {
 		{"empty input yields no subjects", "", []Subject{}},
 		{"karma events inside backticks are ignored", "```c++```", []Subject{}},
 		{"an increment yields nothing", "++ -- ", []Subject{}},
-		{"bumping empty parens yields nothing", "()++ ()--", []Subject{}},
 		{"karma events inside of backticks should be ignored", "`all++ of-- this++ should-- be++ ignored--`", []Subject{}},
 		{"parser will backtrace if tick is not closed", "`c test++", []Subject{{"c", 0}, {"test", 1}}},
 		{"karma events inside of fences should be ignored", "``` test++ ```", []Subject{}},
+		{"bumping empty parens yields nothing", "()++ ()--", []Subject{}},
+		{"an unclosed tick does not prevent parsing other subjects", "asdf `hi`` hello++", []Subject{{"asdf", 0}, {"hello", 1}}},
 	}
 
 	for _, tt := range tests {
