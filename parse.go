@@ -1,5 +1,10 @@
 package main
 
+import (
+	"strings"
+	"unicode"
+)
+
 // Module parse (unsurprisingly) parses karma subjects from text.
 //
 // A karma subject is an entity whose karma is either incremented
@@ -17,11 +22,6 @@ package main
 //
 // Example: (Hello World)-- -> subject name: Hello World -1 karma
 
-import (
-	"strings"
-	"unicode"
-)
-
 // Subject represents a karma operation on a named entity.
 type Subject struct {
 	Name  string
@@ -31,190 +31,295 @@ type Subject struct {
 // ParseSubjects parses subjects from text.
 func ParseSubjects(s string) []Subject {
 	subjects := make([]Subject, 0)
-	var sub Subject
-	var ok bool
-	var remaining []rune
 
-	remaining = []rune(s)
-	for len(remaining) > 0 {
-		sub, ok, remaining = tryParseSubject(remaining)
-		if !ok || len(sub.Name) == 0 {
-			continue
+	_, items := lex([]rune(s))
+	for {
+		if i, ok := <-items; ok {
+			s := parseSubject(i)
+			if len(s.Name) == 0 {
+				continue
+			}
+			subjects = append(subjects, s)
+		} else {
+			break
 		}
-		subjects = append(subjects, sub)
 	}
+
 	return subjects
 }
 
-// tryParseSubject is the general entrypoint for parsing subjects
-// from text.
-//
-// This function, and all of the functions that it calls, work by
-// taking as input the text "input stream". Regardless of whether
-// it is successful (i.e., it returns a Subject object and the
-// returned 'ok' bool is true), it will also return the *remaining*
-// input stream that it did not consume to produce the subject.
-//
-// This mechanism is helpful as it allows callers to loop over this
-// function as if it were an iterator. The other benefit to this
-// "consume-and-return-the-remainder" approach is that it allows
-// the parser to "backtrack" in case it consumed the entire input
-// looking for a matching backtick or closing parenthesis.
-func tryParseSubject(rs []rune) (Subject, bool, []rune) {
-	remaining := seekSubjectStart(rs)
-	/* in case an unclosed backtick forced the search to
-	 * deplete the input stream, backtrack and try again,
-	 * skipping over the unclosed backtick
-	 */
-	if len(remaining) == 0 {
-		/* don't backtrack if the input was legitimately
-		   completely consumed */
-		if len(rs) > 1 && rs[0] == '`' && rs[len(rs)-1] == '`' {
-			return Subject{}, false, []rune{}
-		}
-		return Subject{}, false, rs[1:]
+func lex(input []rune) (*lexer, chan item) {
+	l := &lexer{
+		input: input,
+		items: make(chan item),
 	}
+	go l.run()
 
-	var sub Subject
-	var ok bool
-
-	if remaining[0] == '(' {
-		sub, ok, remaining = tryParseParens(remaining)
-		/* if the parenthesis is not matched, the input
-		 * stream will get depleted, so backtrack and try
-		 * again, this time skipping over the opening paren
-		 */
-		if len(remaining) == 0 && !ok {
-			return Subject{}, false, rs[1:]
-		}
-	} else {
-		sub, ok, remaining = tryParsePlain(remaining)
-	}
-
-	return sub, ok, remaining
+	return l, l.items
 }
 
-type seekState int
+func parseSubject(i item) Subject {
+	switch i.kind {
+	case itemText:
+		return parseSubjectPlain(i)
+	case itemTextInParens:
+		return parseSubjectParens(i)
+	default:
+		return Subject{}
+	}
+}
+
+func parseSubjectPlain(i item) Subject {
+	name := string(i.value)
+	karma := 0
+	switch {
+	case strings.HasSuffix(name, "++"):
+		karma = 1
+	case strings.HasSuffix(name, "--"):
+		karma = -1
+	}
+	if karma != 0 {
+		name = name[:len(name)-2]
+	}
+	return Subject{name, karma}
+}
+
+func parseSubjectParens(i item) Subject {
+	name := string(i.value[1:])
+	karma := 0
+	switch {
+	case strings.HasSuffix(name, ")++"):
+		karma = 1
+	case strings.HasSuffix(name, ")--"):
+		karma = -1
+	}
+	if karma != 0 {
+		name = name[:len(name)-3]
+	} else {
+		name = name[:len(name)-1]
+	}
+	return Subject{name, karma}
+}
+
+type lexer struct {
+	input []rune
+	start int
+	pos   int
+	items chan item
+}
+
+func (l *lexer) run() {
+	for state := lexEntry; state != nil; {
+		state = state(l)
+	}
+	close(l.items)
+}
+
+func (l *lexer) emit(t itemType) {
+	if l.pos > l.start {
+		l.items <- item{t, l.input[l.start:l.pos]}
+		l.start = l.pos
+	}
+}
+
+func (l *lexer) next() rune {
+	if l.pos >= len(l.input) {
+		return eof
+	}
+	hold := l.pos
+	l.pos++
+	return l.input[hold]
+}
+
+func (l *lexer) backup() {
+	if l.pos > 0 {
+		l.pos--
+	}
+}
+
+func (l *lexer) peek() rune {
+	r := l.next()
+	if r != eof {
+		l.backup()
+	}
+	return r
+}
+
+func (l *lexer) ignore() {
+	l.start = l.pos
+}
+
+func (l *lexer) first() int {
+	return l.start
+}
+
+func (l *lexer) set(idx int) {
+	if idx < 0 || idx >= len(l.input) {
+		return
+	}
+	l.start = idx
+	l.pos = idx
+}
+
+func (l *lexer) accept(rs []rune) bool {
+	if inRunes(rs, l.next()) {
+		return true
+	}
+	l.backup()
+	return false
+}
+
+func inRunes(rs []rune, r rune) bool {
+	for _, rune := range rs {
+		if rune == r {
+			return true
+		}
+	}
+	return false
+}
+
+const eof rune = 0
+
+type item struct {
+	kind  itemType
+	value []rune
+}
+
+type itemType int
 
 const (
-	seekingTick seekState = iota
-	seekingWhitespace
-	seekingStart
+	itemError        itemType = iota // error occurred during lexing
+	itemText                         // alphanumeric
+	itemTextInParens                 // (alphanumeric)
 )
 
-// seekSubjectStart discards any irrelevant items in the
-// input stream so that the input stream points to a possible
-// karma subject.
-func seekSubjectStart(rs []rune) []rune {
-	state := seekingStart
-	start := 0
-	for _, r := range rs {
-		switch state {
-		case seekingStart:
-			if r != '`' && !unicode.IsSpace(r) {
-				return rs[start:]
-			}
-			if r == '`' {
-				state = seekingTick
-			}
-		case seekingTick:
-			if r == '`' {
-				state = seekingWhitespace
-			}
-		case seekingWhitespace:
-			if unicode.IsSpace(r) {
-				state = seekingStart
-			}
-			if r == '`' {
-				state = seekingTick
-			}
-		}
-		start++
+const tick rune = '`'
+const openParen rune = '('
+const closedParen rune = ')'
+
+type stateFn func(*lexer) stateFn
+
+func lexEntry(l *lexer) stateFn {
+	ch := l.peek()
+	switch {
+	case ch == eof:
+		return nil
+	case ch == openParen:
+		return lexInParen
+	case ch == tick:
+		return discardTick
+	case unicode.IsSpace(ch):
+		return discardSpace
+	default:
+		return lexText
 	}
-	return rs[start:]
 }
 
-// tryParseParens is called when the first character in the
-// input stream is an opening parenthesis. It will read
-// everything until the parenthesis is closed. Once closed,
-// it will attempt to read the karma increment or decrement
-// following the closing parenthesis.
-func tryParseParens(rs []rune) (Subject, bool, []rune) {
-	open := 1
-	start := 1
-	end := 1
-	for _, r := range rs[start:] {
-		if r == '(' {
-			open++
+func lexText(l *lexer) stateFn {
+	for ch := l.next(); ch != eof; {
+		if unicode.IsSpace(ch) {
+			l.backup()
+			break
 		}
-		if r == ')' {
+		if ch == tick {
+			break
+		}
+		ch = l.next()
+	}
+
+	l.emit(itemText)
+
+	return lexEntry
+}
+
+func discardTick(l *lexer) stateFn {
+	l.next()
+	l.ignore()
+	restart := l.first() // make note of where we are
+
+	for ch := l.next(); ch != eof; {
+		if ch == tick {
+			l.ignore()
+			return lexEntry
+		}
+		ch = l.next()
+	}
+
+	// didn't find a matching tick
+	if l.peek() == eof {
+		l.set(restart)
+		if l.peek() == eof {
+			return nil
+		}
+		return lexEntry
+	}
+
+	// discard all the way up to this tick
+	l.ignore()
+
+	return lexEntry
+}
+
+func discardSpace(l *lexer) stateFn {
+	for ch := l.next(); ch != eof; {
+		if !unicode.IsSpace(ch) {
+			l.backup()
+			break
+		}
+		ch = l.next()
+	}
+
+	ch := l.peek()
+	if ch == eof {
+		return nil
+	}
+	l.ignore()
+
+	return lexEntry
+}
+
+func lexInParen(l *lexer) stateFn {
+	restart := l.first()
+
+	open := 0
+	for ch := l.next(); ch != eof; {
+		switch ch {
+		case openParen:
+			open++
+		case closedParen:
 			open--
 		}
 		if open == 0 {
 			break
 		}
-		end++
+		ch = l.next()
 	}
 
-	if open != 0 {
-		return Subject{}, false, rs[start:]
+	// didn't close the paren
+	if l.peek() == eof && open != 0 {
+		l.set(restart + 1)
+		return lexEntry
 	}
 
-	sub := Subject{string(rs[start:end]), 0}
-
-	/* depleted the input stream early, was expecting a ++ or --
-	 * at the end
-	 */
-	if len(rs)-1 == end {
-		return sub, true, []rune{}
+	// no karma operation trailing after this
+	if l.peek() == eof || unicode.IsSpace(l.peek()) {
+		l.emit(itemTextInParens)
+		return lexEntry
 	}
 
-	karmaStart := end + 1       // index of the first + or -
-	karmaEnd := karmaStart + 1  // index of the second + or -
-	expectSpace := karmaEnd + 1 // index where whitespace is expected or eof
+	acceptable := []rune("+-")
 
-	/* a valid subject will have whitespace after the ++/-- OR
-	 * the ++/-- is the end of the input stream
-	 */
-	sepBySpace := len(rs) > expectSpace && unicode.IsSpace(rs[expectSpace])
-	eof := len(rs)-1 == karmaEnd
-
-	if sepBySpace || eof {
-		if rs[karmaStart] == '+' && rs[karmaEnd] == '+' {
-			sub.Karma = 1
-		} else if rs[karmaStart] == '-' && rs[karmaEnd] == '-' {
-			sub.Karma = -1
-		}
-		return sub, true, rs[karmaEnd+1:]
+	// + or -
+	l.accept(acceptable)
+	l.accept(acceptable)
+	end := l.next()
+	if unicode.IsSpace(end) {
+		l.backup()
 	}
 
-	return sub, true, rs[end+1:]
-}
-
-// tryParsePlain is a catch-all parser. It will essentially read
-// until it encounters whitespace and then check if the last two
-// characters are a karma operation.
-func tryParsePlain(rs []rune) (Subject, bool, []rune) {
-	end := 0
-	for _, r := range rs {
-		if unicode.IsSpace(r) || r == '`' {
-			break
-		}
-		end++
+	if unicode.IsSpace(end) || end == eof {
+		l.emit(itemTextInParens)
 	}
 
-	sub := Subject{string(rs[:end]), 0}
-	separated := (end < len(rs) && unicode.IsSpace(rs[end])) || len(rs) == end
-	if separated {
-		switch {
-		case strings.HasSuffix(sub.Name, "++"):
-			sub.Karma = 1
-		case strings.HasSuffix(sub.Name, "--"):
-			sub.Karma = -1
-		}
-		if sub.Karma != 0 {
-			sub.Name = sub.Name[:len(sub.Name)-2]
-		}
-	}
-	return sub, true, rs[end:]
+	return lexEntry
 }
