@@ -85,7 +85,7 @@ func parseSubjectPlain(i item) Subject {
 }
 
 func parseSubjectParens(i item) Subject {
-	name := string(i.value[1:])
+	name := string(i.value)
 	karma := 0
 	switch {
 	case strings.HasSuffix(name, ")++"):
@@ -93,10 +93,11 @@ func parseSubjectParens(i item) Subject {
 	case strings.HasSuffix(name, ")--"):
 		karma = -1
 	}
-	if karma != 0 {
-		name = name[:len(name)-3]
-	} else {
-		name = name[:len(name)-1]
+	switch {
+	case karma != 0:
+		name = name[1 : len(name)-len(")..")]
+	case strings.HasSuffix(name, ")"):
+		name = name[1 : len(name)-1]
 	}
 	return Subject{name, karma}
 }
@@ -311,6 +312,10 @@ func lexInParen(l *lexer) stateFn {
 
 	// + or -
 	l.accept(acceptable)
+	if unicode.IsSpace(l.peek()) || l.peek() == eof {
+		l.emit(itemTextInParens)
+		return lexEntry
+	}
 	l.accept(acceptable)
 	end := l.next()
 	if unicode.IsSpace(end) {
