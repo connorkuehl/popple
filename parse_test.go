@@ -36,6 +36,7 @@ func TestParseSubjects(t *testing.T) {
 		{"karma events inside of fences should be ignored", "``` test++ ```", []Subject{}},
 		{"bumping empty parens yields nothing", "()++ ()--", []Subject{}},
 		{"an unclosed tick does not prevent parsing other subjects", "asdf `hi`` hello++", []Subject{{"asdf", 0}, {"hello", 1}}},
+		{"a paren subject ending with a single character is taken as plaintext", "(hi)+", []Subject{{"(hi)+", 0}}},
 	}
 
 	for _, tt := range tests {
