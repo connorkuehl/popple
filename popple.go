@@ -3,10 +3,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -70,17 +72,97 @@ func main() {
 	}
 
 	cancel := make(chan struct{})
-	workQueue := make(chan Job, *numJobs)
+	workQueue := make(chan commandFn, *numJobs)
 
 	for i := uint(0); i < *numWorkers; i++ {
-		go worker(workQueue, cancel, db)
+		go worker(workQueue, cancel)
+	}
+
+	// Generate the command dispatch table up front.
+	//
+	// These are all closures to capture the state from this function,
+	// such as the GORM database (db).
+	//
+	// This is useful because the workQueue can simply be a workqueue
+	// of func() and we can supply all the relevent data items as needed
+	// from the closure capture.
+	cmds := []struct {
+		verb    string
+		hasArgs bool
+		command func(poppleRequest, poppleResponse) commandFn
+	}{
+		{"announce", true, func(req poppleRequest, rsp poppleResponse) commandFn {
+			return func() {
+				SetAnnounce(req, rsp, db)
+			}
+		}},
+		{"help", false, func(req poppleRequest, rsp poppleResponse) commandFn {
+			return func() {
+				SendHelp(req, rsp)
+			}
+		}},
+		{"karma", true, func(req poppleRequest, rsp poppleResponse) commandFn {
+			return func() {
+				CheckKarma(req, rsp, db)
+			}
+		}},
+		{"bot", false, func(req poppleRequest, rsp poppleResponse) commandFn {
+			return func() {
+				Bot(req, rsp, db)
+			}
+		}},
+		{"top", false, func(req poppleRequest, rsp poppleResponse) commandFn {
+			return func() {
+				Top(req, rsp, db)
+			}
+		}},
+		{"version", false, func(req poppleRequest, rsp poppleResponse) commandFn {
+			return func() {
+				SendVersion(req, rsp)
+			}
+		}},
 	}
 
 	session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		select {
-		case workQueue <- Job{s, m}:
-		default:
-			log.Println("Warning: job queue capacity depleted; dropping incoming job")
+		// don't process messages sent by the bot
+		if s.State.User.ID == m.Author.ID {
+			return
+		}
+
+		isDM := len(m.GuildID) == 0
+		bot := "@" + s.State.User.Username
+
+		msg := m.ContentWithMentionsReplaced()
+		for _, c := range cmds {
+			var spacer string
+			if c.hasArgs {
+				spacer = " "
+			}
+
+			var strip string
+			fullPrefix := fmt.Sprintf("%s %s%s", bot, c.verb, spacer)
+			dmPrefix := fmt.Sprintf("%s%s", c.verb, spacer)
+			if strings.HasPrefix(msg, fullPrefix) {
+				strip = fullPrefix
+			} else if isDM && strings.HasPrefix(msg, dmPrefix) {
+				strip = dmPrefix
+			} else {
+				// message doesn't appear to be addressing the bot with a command
+				// just move on
+				continue
+			}
+
+			// remove the @Bot (if it's there) as well as the command text so
+			// the command processing layer doesn't need to worry about it
+			msg = msg[len(strip):]
+
+			workQueue <- c.command(message{m.Message, msg}, response{s, m.Message})
+			return
+		}
+
+		// default action is to just check for karma operations
+		workQueue <- func() {
+			ModKarma(message{m.Message, msg}, response{s, m.Message}, db)
 		}
 	})
 
@@ -101,4 +183,15 @@ func main() {
 	close(workQueue)
 
 	session.Close()
+}
+
+func worker(workQueue <-chan commandFn, cancel <-chan struct{}) {
+	for {
+		select {
+		case <-cancel:
+			return
+		case cmd := <-workQueue:
+			cmd()
+		}
+	}
 }
