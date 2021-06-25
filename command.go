@@ -153,6 +153,10 @@ func SendVersion(req poppleRequest, rsp poppleResponse) {
 // count up the karma, and reply with the karma modifications that the
 // message has made resulted in.
 func ModKarma(req poppleRequest, rsp poppleResponse, db *gorm.DB) {
+	if req.IsDM() {
+		return
+	}
+
 	modifiers := marshalSubjects(ParseSubjects(req.String()))
 
 	reply := strings.Builder{}
