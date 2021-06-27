@@ -189,6 +189,7 @@ type item struct {
 type itemType int
 
 const (
+	itemError        itemType = iota // error occurred during lexing
 	itemText                         // alphanumeric
 	itemTextInParens                 // (alphanumeric)
 )
