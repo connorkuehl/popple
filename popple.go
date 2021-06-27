@@ -61,8 +61,8 @@ func main() {
 		log.Fatalf("Failed to read token from %s\n", *tokenFile)
 	}
 
-	_ := db.AutoMigrate(&Config{})
-	_ := db.AutoMigrate(&Entity{})
+	db.AutoMigrate(&Config{})
+	db.AutoMigrate(&Entity{})
 
 	session, err := discordgo.New("Bot " + string(token))
 	if err != nil {
