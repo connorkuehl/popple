@@ -189,7 +189,7 @@ type item struct {
 type itemType int
 
 const (
-	itemError        itemType = iota // error occurred during lexing
+	itemError        itemType = iota // error occurred during lexing //nolint:golint,unused
 	itemText                         // alphanumeric
 	itemTextInParens                 // (alphanumeric)
 )
