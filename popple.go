@@ -89,34 +89,34 @@ func main() {
 	cmds := []struct {
 		verb    string
 		hasArgs bool
-		command func(request, poppleResponse) commandFn
+		command func(request, responseWriter) commandFn
 	}{
-		{"announce", true, func(req request, rsp poppleResponse) commandFn {
+		{"announce", true, func(req request, rsp responseWriter) commandFn {
 			return func() {
 				SetAnnounce(req, rsp, db)
 			}
 		}},
-		{"help", false, func(req request, rsp poppleResponse) commandFn {
+		{"help", false, func(req request, rsp responseWriter) commandFn {
 			return func() {
 				SendHelp(req, rsp)
 			}
 		}},
-		{"karma", true, func(req request, rsp poppleResponse) commandFn {
+		{"karma", true, func(req request, rsp responseWriter) commandFn {
 			return func() {
 				CheckKarma(req, rsp, db)
 			}
 		}},
-		{"bot", false, func(req request, rsp poppleResponse) commandFn {
+		{"bot", false, func(req request, rsp responseWriter) commandFn {
 			return func() {
 				Bot(req, rsp, db)
 			}
 		}},
-		{"top", false, func(req request, rsp poppleResponse) commandFn {
+		{"top", false, func(req request, rsp responseWriter) commandFn {
 			return func() {
 				Top(req, rsp, db)
 			}
 		}},
-		{"version", false, func(req request, rsp poppleResponse) commandFn {
+		{"version", false, func(req request, rsp responseWriter) commandFn {
 			return func() {
 				SendVersion(req, rsp)
 			}
