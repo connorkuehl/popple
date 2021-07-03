@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -125,6 +126,56 @@ func TestModKarma(t *testing.T) {
 	}
 }
 
+func TestSetAnnounce(t *testing.T) {
+	interactiveCases := []struct {
+		name              string
+		input             request
+		expectedResponses []testResponse
+		before, after     Config
+	}{
+		{"on", request{message: "on"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: false}},
+		{"off", request{message: "off"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: true}},
+		{"yes", request{message: "yes"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: false}},
+		{"no", request{message: "no"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: true}},
+		{"invalid setting", request{message: "asdf"}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, Config{}, Config{}},
+		{"empty", request{message: ""}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, Config{}, Config{}},
+	}
+
+	for _, tt := range interactiveCases {
+		t.Run(tt.name, func(t *testing.T) {
+			db, cleanup := makeScratchDB(t)
+			defer cleanup()
+			populateConfigsInDB(db, []Config{tt.before})
+
+			var rsp responseSink
+			SetAnnounce(tt.input, &rsp, db)
+
+			reflect.DeepEqual(tt.expectedResponses, rsp.responses)
+
+			var actual Config
+			db.Where(&Config{}).First(&actual)
+			if actual.NoAnnounce != tt.after.NoAnnounce {
+				t.Errorf("expected NoAnnounce=%v got %v", tt.after.NoAnnounce, actual.NoAnnounce)
+			}
+		})
+	}
+
+	ignoreCases := []struct {
+		name  string
+		input request
+	}{
+		{"ignored in DM context", request{isDM: true, message: "on"}},
+	}
+
+	for _, tt := range ignoreCases {
+		t.Run(tt.name, func(t *testing.T) {
+			var rsp responseSink
+			SetAnnounce(tt.input, &rsp, nil)
+			assertNumResponses(t, rsp, 0)
+		})
+	}
+}
+
 func assertNumResponses(t *testing.T, rsp responseSink, expected int) {
 	if len(rsp.responses) != expected {
 		t.Errorf("expected %d responses, got %d %#v", expected, len(rsp.responses), rsp)
@@ -218,7 +269,7 @@ func makeScratchDB(t *testing.T) (*gorm.DB, func()) {
 		t.Fatalf("%s", err)
 	}
 
-	db.AutoMigrate(&Entity{})
+	db.AutoMigrate(&Entity{}, &Config{})
 
 	return db, func() {
 		os.Remove(dbName)
@@ -228,5 +279,11 @@ func makeScratchDB(t *testing.T) (*gorm.DB, func()) {
 func populateEntitiesInDB(db *gorm.DB, rows []Entity) {
 	for _, r := range rows {
 		db.Create(&r)
+	}
+}
+
+func populateConfigsInDB(db *gorm.DB, rows []Config) {
+	for _, c := range rows {
+		db.Create(&c)
 	}
 }
