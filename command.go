@@ -71,6 +71,11 @@ func CheckKarma(req request, rsp responseWriter, db *gorm.DB) {
 		sep = " "
 	}
 
+	message := strings.TrimSpace(reply.String())
+	if len(message) == 0 {
+		return
+	}
+
 	err := rsp.SendMessageToChannel(reply.String())
 	if err != nil {
 		log.Printf("Error when sending reply to channel: %s\n", err)

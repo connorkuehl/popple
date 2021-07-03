@@ -44,6 +44,7 @@ func TestCheckKarma(t *testing.T) {
 		name  string
 		input request
 	}{
+		{"empty", request{message: ""}},
 		{"in direct message context", request{message: "Popple", isDM: true}},
 	}
 
