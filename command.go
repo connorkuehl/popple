@@ -23,7 +23,7 @@ type request struct {
 	message string
 }
 
-type poppleResponse interface {
+type responseWriter interface {
 	SendMessageToChannel(msg string) error
 	SendReply(msg string) error
 	React(emoji string) error
@@ -53,7 +53,7 @@ type commandFn func()
 
 // CheckKarma allows server inhabitants to query karma levels
 // for subjects they have incremented or decremented over time.
-func CheckKarma(req request, rsp poppleResponse, db *gorm.DB) {
+func CheckKarma(req request, rsp responseWriter, db *gorm.DB) {
 	if req.isDM {
 		return
 	}
@@ -79,7 +79,7 @@ func CheckKarma(req request, rsp poppleResponse, db *gorm.DB) {
 
 // SetAnnounce allows server inhabitants to enable or disable Popple
 // announcements when karma is modified from a message.
-func SetAnnounce(req request, rsp poppleResponse, db *gorm.DB) {
+func SetAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 	if req.isDM {
 		return
 	}
@@ -111,7 +111,7 @@ func SetAnnounce(req request, rsp poppleResponse, db *gorm.DB) {
 }
 
 // SendHelp allows server inhabitants to request usage information.
-func SendHelp(req request, rsp poppleResponse) {
+func SendHelp(req request, rsp responseWriter) {
 	reply := "Usage: https://github.com/connorkuehl/popple#usage"
 
 	err := rsp.SendMessageToChannel(reply)
@@ -122,7 +122,7 @@ func SendHelp(req request, rsp poppleResponse) {
 
 // SendVersion allows server inhabitants to see what Popple revision
 // is running.
-func SendVersion(req request, rsp poppleResponse) {
+func SendVersion(req request, rsp responseWriter) {
 	err := rsp.SendMessageToChannel(fmt.Sprintf("I'm running version %s.", Version))
 	if err != nil {
 		log.Printf("Error sending version: %s", err)
@@ -135,7 +135,7 @@ func SendVersion(req request, rsp poppleResponse) {
 // Popple will scan the entire message, parse out any karma subjects,
 // count up the karma, and reply with the karma modifications that the
 // message has made resulted in.
-func ModKarma(req request, rsp poppleResponse, db *gorm.DB) {
+func ModKarma(req request, rsp responseWriter, db *gorm.DB) {
 	if req.isDM {
 		return
 	}
@@ -181,17 +181,17 @@ func ModKarma(req request, rsp poppleResponse, db *gorm.DB) {
 
 // Bot allows server inhabitants to see who is "in the lead" for
 // the LEAST amount of karma.
-func Bot(req request, rsp poppleResponse, db *gorm.DB) {
+func Bot(req request, rsp responseWriter, db *gorm.DB) {
 	board(req, rsp, db, "asc")
 }
 
 // Top allows server inhabitants to see who is in the lead in terms
 // of karma accumulated.
-func Top(req request, rsp poppleResponse, db *gorm.DB) {
+func Top(req request, rsp responseWriter, db *gorm.DB) {
 	board(req, rsp, db, "desc")
 }
 
-func board(req request, rsp poppleResponse, db *gorm.DB, sort string) {
+func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
 	if req.isDM {
 		return
 	}
