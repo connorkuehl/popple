@@ -89,34 +89,34 @@ func main() {
 	cmds := []struct {
 		verb    string
 		hasArgs bool
-		command func(poppleRequest, poppleResponse) commandFn
+		command func(request, poppleResponse) commandFn
 	}{
-		{"announce", true, func(req poppleRequest, rsp poppleResponse) commandFn {
+		{"announce", true, func(req request, rsp poppleResponse) commandFn {
 			return func() {
 				SetAnnounce(req, rsp, db)
 			}
 		}},
-		{"help", false, func(req poppleRequest, rsp poppleResponse) commandFn {
+		{"help", false, func(req request, rsp poppleResponse) commandFn {
 			return func() {
 				SendHelp(req, rsp)
 			}
 		}},
-		{"karma", true, func(req poppleRequest, rsp poppleResponse) commandFn {
+		{"karma", true, func(req request, rsp poppleResponse) commandFn {
 			return func() {
 				CheckKarma(req, rsp, db)
 			}
 		}},
-		{"bot", false, func(req poppleRequest, rsp poppleResponse) commandFn {
+		{"bot", false, func(req request, rsp poppleResponse) commandFn {
 			return func() {
 				Bot(req, rsp, db)
 			}
 		}},
-		{"top", false, func(req poppleRequest, rsp poppleResponse) commandFn {
+		{"top", false, func(req request, rsp poppleResponse) commandFn {
 			return func() {
 				Top(req, rsp, db)
 			}
 		}},
-		{"version", false, func(req poppleRequest, rsp poppleResponse) commandFn {
+		{"version", false, func(req request, rsp poppleResponse) commandFn {
 			return func() {
 				SendVersion(req, rsp)
 			}
@@ -156,13 +156,18 @@ func main() {
 			// the command processing layer doesn't need to worry about it
 			msg = msg[len(strip):]
 
-			workQueue <- c.command(message{m.Message, msg}, response{s, m.Message})
+			req := request{isDM: len(m.Message.GuildID) == 0, guildID: m.Message.GuildID, message: msg}
+			rsp := response{s, m.Message}
+
+			workQueue <- c.command(req, rsp)
 			return
 		}
 
 		// default action is to just check for karma operations
 		workQueue <- func() {
-			ModKarma(message{m.Message, msg}, response{s, m.Message}, db)
+			req := request{isDM: len(m.Message.GuildID) == 0, guildID: m.Message.GuildID, message: msg}
+			rsp := response{s, m.Message}
+			ModKarma(req, rsp, db)
 		}
 	})
 
