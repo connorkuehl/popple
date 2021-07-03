@@ -25,7 +25,8 @@ func TestCheckKarma(t *testing.T) {
 		{"multiple subjects", request{message: "Popple Nobody Gophers"}, []string{hasKarma("Nobody", 0), hasKarma("Popple", 1), hasKarma("Gophers", 12)}},
 	}
 
-	db, cleanup := makeScratchDB(t, []Entity{
+	db, cleanup := makeScratchDB(t)
+	populateEntitiesInDB(db, []Entity{
 		{Name: "Popple", Karma: 1},
 		{Name: "Gophers", Karma: 12},
 	})
@@ -70,7 +71,7 @@ func TestModKarma(t *testing.T) {
 
 	for _, tt := range interactiveCases {
 		t.Run(tt.name, func(t *testing.T) {
-			db, cleanup := makeScratchDB(t, []Entity{})
+			db, cleanup := makeScratchDB(t)
 			defer cleanup()
 
 			var rsp responseSink
@@ -109,8 +110,9 @@ func TestModKarma(t *testing.T) {
 
 	for _, tt := range dataCases {
 		t.Run(tt.name, func(t *testing.T) {
-			db, cleanup := makeScratchDB(t, tt.before)
+			db, cleanup := makeScratchDB(t)
 			defer cleanup()
+			populateEntitiesInDB(db, tt.before)
 
 			var rsp responseSink
 			ModKarma(tt.input, &rsp, db)
@@ -198,7 +200,7 @@ func hasKarma(name string, karma int) string {
 	return fmt.Sprintf("%s has %d karma", name, karma)
 }
 
-func makeScratchDB(t *testing.T, rows []Entity) (*gorm.DB, func()) {
+func makeScratchDB(t *testing.T) (*gorm.DB, func()) {
 	_ = os.MkdirAll(fixturesDir, 0755)
 
 	f, err := ioutil.TempFile(fixturesDir, "db")
@@ -218,11 +220,13 @@ func makeScratchDB(t *testing.T, rows []Entity) (*gorm.DB, func()) {
 
 	db.AutoMigrate(&Entity{})
 
-	for _, r := range rows {
-		db.Create(&r)
-	}
-
 	return db, func() {
 		os.Remove(dbName)
+	}
+}
+
+func populateEntitiesInDB(db *gorm.DB, rows []Entity) {
+	for _, r := range rows {
+		db.Create(&r)
 	}
 }
