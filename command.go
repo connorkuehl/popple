@@ -160,7 +160,7 @@ func ModKarma(req request, rsp responseWriter, db *gorm.DB) {
 		db.Where(&Entity{GuildID: req.guildID, Name: subject}).FirstOrCreate(&entity)
 		entity.Karma += netKarma
 
-		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, entity.Name, entity.Karma))
+		reply.WriteString(fmt.Sprintf("%s%s.", sep, formatKarmaStatement(entity.Name, entity.Karma)))
 		if entity.Karma == 0 {
 			db.Delete(entity)
 		} else {
@@ -224,6 +224,10 @@ func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
 	if err != nil {
 		log.Printf("Error sending message to channel: %s\n", err)
 	}
+}
+
+func formatKarmaStatement(who string, karma int) string {
+	return fmt.Sprintf("%s has %d karma", who, karma)
 }
 
 // marshalSubjects deduplicates the list of Subjects that ParseSubjects

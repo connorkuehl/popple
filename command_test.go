@@ -21,9 +21,9 @@ func TestCheckKarma(t *testing.T) {
 		input   request
 		needles []string
 	}{
-		{"subject with pre-existing karma", request{message: "Popple"}, []string{hasKarma("Popple", 1)}},
-		{"subject without karma", request{message: "Nobody"}, []string{hasKarma("Nobody", 0)}},
-		{"multiple subjects", request{message: "Popple Nobody Gophers"}, []string{hasKarma("Nobody", 0), hasKarma("Popple", 1), hasKarma("Gophers", 12)}},
+		{"subject with pre-existing karma", request{message: "Popple"}, []string{testFormatKarmaStatement("Popple", 1)}},
+		{"subject without karma", request{message: "Nobody"}, []string{testFormatKarmaStatement("Nobody", 0)}},
+		{"multiple subjects", request{message: "Popple Nobody Gophers"}, []string{testFormatKarmaStatement("Nobody", 0), testFormatKarmaStatement("Popple", 1), testFormatKarmaStatement("Gophers", 12)}},
 	}
 
 	db, cleanup := makeScratchDB(t)
@@ -65,9 +65,9 @@ func TestModKarma(t *testing.T) {
 		input   request
 		needles []string
 	}{
-		{"basic increment", request{message: "Test++"}, []string{hasKarma("Test", 1)}},
-		{"basic decrement", request{message: "Test--"}, []string{hasKarma("Test", -1)}},
-		{"many operations", request{message: "NoKarma SomeKarma++ LessKarma-- NoMoreKarma"}, []string{hasKarma("SomeKarma", 1), hasKarma("LessKarma", -1)}},
+		{"basic increment", request{message: "Test++"}, []string{testFormatKarmaStatement("Test", 1)}},
+		{"basic decrement", request{message: "Test--"}, []string{testFormatKarmaStatement("Test", -1)}},
+		{"many operations", request{message: "NoKarma SomeKarma++ LessKarma-- NoMoreKarma"}, []string{testFormatKarmaStatement("SomeKarma", 1), testFormatKarmaStatement("LessKarma", -1)}},
 	}
 
 	for _, tt := range interactiveCases {
@@ -289,10 +289,6 @@ const (
 	responseReply
 	responseEmoji
 )
-
-func hasKarma(name string, karma int) string {
-	return fmt.Sprintf("%s has %d karma", name, karma)
-}
 
 func makeScratchDB(t *testing.T) (*gorm.DB, func()) {
 	_ = os.MkdirAll(fixturesDir, 0755)
