@@ -176,6 +176,27 @@ func TestSetAnnounce(t *testing.T) {
 	}
 }
 
+func TestSendHelp(t *testing.T) {
+	cases := []struct {
+		name              string
+		input             request
+		expectedResponses []testResponse
+	}{
+		{"help sends link to usage", request{}, []testResponse{{kind: responseChannelMessage, value: "Usage: https://github.com/connorkuehl/popple#usage"}}},
+		{"help sends link to usage in DM context", request{isDM: true}, []testResponse{{kind: responseChannelMessage, value: "Usage: https://github.com/connorkuehl/popple#usage"}}},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			var rsp responseSink
+			SendHelp(tt.input, &rsp)
+			if !reflect.DeepEqual(rsp.responses, tt.expectedResponses) {
+				t.Errorf("expected %#v got %#v", tt.expectedResponses, rsp.responses)
+			}
+		})
+	}
+}
+
 func assertNumResponses(t *testing.T, rsp responseSink, expected int) {
 	if len(rsp.responses) != expected {
 		t.Errorf("expected %d responses, got %d %#v", expected, len(rsp.responses), rsp)
