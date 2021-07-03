@@ -219,6 +219,74 @@ func TestSendVersion(t *testing.T) {
 	}
 }
 
+func TestTop(t *testing.T) {
+	db, cleanup := makeScratchDB(t)
+	defer cleanup()
+
+	populateEntitiesInDB(db, []Entity{
+		{Name: "A", Karma: 10},
+		{Name: "B", Karma: 9},
+		{Name: "C", Karma: 8},
+		{Name: "D", Karma: 7},
+		{Name: "E", Karma: 6},
+		{Name: "F", Karma: 5},
+		{Name: "G", Karma: 4},
+		{Name: "H", Karma: 3},
+		{Name: "I", Karma: 2},
+		{Name: "J", Karma: 1},
+		{Name: "K", Karma: 0},
+	})
+
+	cases := []struct {
+		name     string
+		input    request
+		expected testResponse
+	}{
+		{"returns the top 3", request{message: "3"}, testResponse{responseChannelMessage, entityToLeaderboard([]Entity{
+			{Name: "A", Karma: 10},
+			{Name: "B", Karma: 9},
+			{Name: "C", Karma: 8},
+		})}},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			var rsp responseSink
+			Top(tt.input, &rsp, db)
+
+			assertNumResponses(t, rsp, 1)
+			if tt.expected != rsp.responses[0] {
+				t.Errorf("got %s want %s", rsp.responses[0].value, tt.expected.value)
+			}
+		})
+	}
+
+	ignoreCases := []struct {
+		name  string
+		input request
+	}{
+		{"in a DM context", request{isDM: true}},
+		{"zero limit", request{message: "0"}},
+		{"negative limit", request{message: "-1"}},
+	}
+
+	for _, tt := range ignoreCases {
+		t.Run(tt.name, func(t *testing.T) {
+			var rsp responseSink
+			Top(tt.input, &rsp, db)
+			assertNumResponses(t, rsp, 0)
+		})
+	}
+}
+
+func entityToLeaderboard(entities []Entity) string {
+	builder := strings.Builder{}
+	for _, e := range entities {
+		builder.WriteString(testFormatKarmaLeaderboardEntry(e.Name, e.Karma))
+	}
+	return builder.String()
+}
+
 func assertNumResponses(t *testing.T, rsp responseSink, expected int) {
 	if len(rsp.responses) != expected {
 		t.Errorf("expected %d responses, got %d %#v", expected, len(rsp.responses), rsp)

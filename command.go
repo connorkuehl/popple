@@ -221,7 +221,7 @@ func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
 
 	board := strings.Builder{}
 	for _, entity := range entities {
-		board.WriteString(fmt.Sprintf("* %s (%d karma)\n", entity.Name, entity.Karma))
+		board.WriteString(formatKarmaLeaderboardEntry(entity.Name, entity.Karma))
 	}
 
 	err := rsp.SendMessageToChannel(board.String())
@@ -232,6 +232,10 @@ func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
 
 func formatKarmaStatement(who string, karma int) string {
 	return fmt.Sprintf("%s has %d karma", who, karma)
+}
+
+func formatKarmaLeaderboardEntry(who string, karma int) string {
+	return fmt.Sprintf("* %s (%d karma)\n", who, karma)
 }
 
 // marshalSubjects deduplicates the list of Subjects that ParseSubjects
