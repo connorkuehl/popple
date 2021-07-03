@@ -207,9 +207,13 @@ func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
 	parts := strings.Fields(message)
 	if len(parts) > 0 {
 		limitArg, err := strconv.Atoi(parts[0])
-		if err == nil && limitArg > 0 {
+		if err == nil {
 			limit = limitArg
 		}
+	}
+
+	if limit < 1 {
+		return
 	}
 
 	var entities []Entity
