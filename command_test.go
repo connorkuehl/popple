@@ -197,6 +197,28 @@ func TestSendHelp(t *testing.T) {
 	}
 }
 
+func TestSendVersion(t *testing.T) {
+	cases := []struct {
+		name              string
+		input             request
+		expectedResponses []testResponse
+	}{
+		{"version sends version", request{}, []testResponse{{kind: responseChannelMessage, value: fmt.Sprintf("I'm running version %s.", Version)}}},
+		{"version sends version in DM context", request{isDM: true}, []testResponse{{kind: responseChannelMessage, value: fmt.Sprintf("I'm running version %s.", Version)}}},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			var rsp responseSink
+			SendVersion(tt.input, &rsp)
+
+			if !reflect.DeepEqual(rsp.responses, tt.expectedResponses) {
+				t.Errorf("expected %#v got %#v", tt.expectedResponses, rsp.responses)
+			}
+		})
+	}
+}
+
 func assertNumResponses(t *testing.T, rsp responseSink, expected int) {
 	if len(rsp.responses) != expected {
 		t.Errorf("expected %d responses, got %d %#v", expected, len(rsp.responses), rsp)
