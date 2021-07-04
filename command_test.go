@@ -1,5 +1,17 @@
 package main
 
+import (
+	"io/ioutil"
+	"os"
+	"testing"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+)
+
+const fixturesDir string = "test-fixtures"
+
 type responseSink struct {
 	responses []testResponse
 }
@@ -36,3 +48,31 @@ const (
 	responseEmoji
 )
 
+func makeScratchDB(t *testing.T, rows []Entity) (*gorm.DB, func()) {
+	_ = os.MkdirAll(fixturesDir, 0755)
+
+	f, err := ioutil.TempFile(fixturesDir, "db")
+	if err != nil {
+		t.Fatalf("%s", err)
+	}
+
+	dbName := f.Name()
+	f.Close()
+
+	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	if err != nil {
+		t.Fatalf("%s", err)
+	}
+
+	db.AutoMigrate(&Entity{})
+
+	for _, r := range rows {
+		db.Create(&r)
+	}
+
+	return db, func() {
+		os.Remove(dbName)
+	}
+}
