@@ -109,7 +109,7 @@ func main() {
 		ModKarma(req, rsp, db)
 	})
 
-	session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+	detachMessageCreateHandler := session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		// don't process messages sent by the bot
 		if s.State.User.ID == m.Author.ID {
 			return
@@ -128,6 +128,7 @@ func main() {
 	sessionChannel := make(chan os.Signal, 1)
 	signal.Notify(sessionChannel, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sessionChannel
+	detachMessageCreateHandler()
 	close(cancel)
 	close(workQueue)
 
