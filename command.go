@@ -268,6 +268,11 @@ func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
 		board.WriteString(formatKarmaLeaderboardEntry(entity.Name, entity.Karma))
 	}
 
+	reply := board.String()
+	if len(reply) == 0 {
+		return
+	}
+
 	err := rsp.SendMessageToChannel(board.String())
 	if err != nil {
 		log.Printf("Error sending message to channel: %s\n", err)
