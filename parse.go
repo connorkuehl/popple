@@ -190,8 +190,7 @@ type itemType int
 
 //nolint:golint,unused
 const (
-	_                itemType = iota // error occurred during lexing
-	itemText                         // alphanumeric
+	itemText         itemType = iota // alphanumeric
 	itemTextInParens                 // (alphanumeric)
 )
 
