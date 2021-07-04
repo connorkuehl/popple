@@ -17,6 +17,50 @@ import (
 	"gorm.io/gorm"
 )
 
+type router struct {
+	bot      string
+	routes   []route
+	catchall route
+}
+
+func (r *router) addRoute(name string, work commandFn) {
+	route := route{name, work}
+	if name == "*" {
+		r.catchall = route
+	} else {
+		r.routes = append(r.routes, route)
+	}
+}
+
+func (r *router) route(req request, rsp responseWriter) {
+	for _, route := range r.routes {
+		var stripPrefix string
+		fullPrefix := fmt.Sprintf("%s %s", r.bot, route.match)
+		dmPrefix := route.match
+
+		if strings.HasPrefix(req.message, fullPrefix) {
+			stripPrefix = fullPrefix
+		} else if req.isDM && strings.HasPrefix(req.message, dmPrefix) {
+			stripPrefix = dmPrefix
+		} else {
+			continue
+		}
+
+		req.message = strings.TrimSpace(req.message[len(stripPrefix):])
+		route.cmd(req, rsp)
+		return
+	}
+
+	if r.catchall.cmd != nil {
+		r.catchall.cmd(req, rsp)
+	}
+}
+
+type route struct {
+	match string
+	cmd   commandFn
+}
+
 type request struct {
 	isDM    bool
 	guildID string
@@ -49,7 +93,7 @@ func (r response) React(emojiID string) error {
 	return err
 }
 
-type commandFn func()
+type commandFn func(req request, rsp responseWriter)
 
 // CheckKarma allows server inhabitants to query karma levels
 // for subjects they have incremented or decremented over time.

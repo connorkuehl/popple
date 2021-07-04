@@ -340,6 +340,72 @@ func TestBot(t *testing.T) {
 
 }
 
+func TestRouter(t *testing.T) {
+	const bot string = "@Popple"
+
+	cases := []struct {
+		name   string
+		req    request
+		routes []route
+	}{
+		{"no routes", request{message: "asdf"}, []route{}},
+		{"catchall", request{}, []route{
+			{"help", func(req request, rsp responseWriter) {
+				t.Errorf("expected to be routed to catchall, but wasn't")
+			}},
+			{"*", func(req request, rsp responseWriter) {
+				// yay
+			}},
+		}},
+		{"username and command is stripped", request{message: bot + " help pass"}, []route{
+			{"help", func(req request, rsp responseWriter) {
+				if req.message != "pass" {
+					t.Errorf("got %s, want %s", req.message, "pass")
+				}
+			}},
+			{"*", func(req request, rsp responseWriter) {
+				t.Errorf("fell into catchall, should have been routed elsewhere")
+			}},
+		}},
+		{"username is required outside of DMs", request{message: "help"}, []route{
+			{"help", func(req request, rsp responseWriter) {
+				t.Errorf("made it to subcommand but bot wasn't mentioned")
+			}},
+			{"*", func(req request, rsp responseWriter) {
+				// yay
+			}},
+		}},
+		{"username is optional in DMs", request{message: "help", isDM: true}, []route{
+			{"help", func(req request, rsp responseWriter) {
+				// yay
+			}},
+			{"*", func(req request, rsp responseWriter) {
+				t.Errorf("fell into catchall, should have been routed elsewhere")
+			}},
+		}},
+		{"can use username in DMs if preferred", request{message: bot + " help", isDM: true}, []route{
+			{"help", func(req request, rsp responseWriter) {
+				// yay
+			}},
+			{"*", func(req request, rsp responseWriter) {
+				t.Errorf("fell into catchall, should have been routed elsewhere")
+			}},
+		}},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			r := router{}
+			r.bot = bot
+			for _, route := range tt.routes {
+				r.addRoute(route.match, route.cmd)
+			}
+
+			r.route(tt.req, nil)
+		})
+	}
+}
+
 func entityToLeaderboard(entities []Entity) string {
 	builder := strings.Builder{}
 	for _, e := range entities {

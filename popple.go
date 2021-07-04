@@ -3,12 +3,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -72,56 +70,38 @@ func main() {
 	}
 
 	cancel := make(chan struct{})
-	workQueue := make(chan commandFn, *numJobs)
+	workQueue := make(chan func(), *numJobs)
 
 	for i := uint(0); i < *numWorkers; i++ {
 		go worker(workQueue, cancel)
 	}
 
-	// Generate the command dispatch table up front.
-	//
-	// These are all closures to capture the state from this function,
-	// such as the GORM database (db).
-	//
-	// This is useful because the workQueue can simply be a workqueue
-	// of func() and we can supply all the relevent data items as needed
-	// from the closure capture.
-	cmds := []struct {
-		verb    string
-		hasArgs bool
-		command func(request, responseWriter) commandFn
-	}{
-		{"announce", true, func(req request, rsp responseWriter) commandFn {
-			return func() {
-				SetAnnounce(req, rsp, db)
-			}
-		}},
-		{"help", false, func(req request, rsp responseWriter) commandFn {
-			return func() {
-				SendHelp(req, rsp)
-			}
-		}},
-		{"karma", true, func(req request, rsp responseWriter) commandFn {
-			return func() {
-				CheckKarma(req, rsp, db)
-			}
-		}},
-		{"bot", false, func(req request, rsp responseWriter) commandFn {
-			return func() {
-				Bot(req, rsp, db)
-			}
-		}},
-		{"top", false, func(req request, rsp responseWriter) commandFn {
-			return func() {
-				Top(req, rsp, db)
-			}
-		}},
-		{"version", false, func(req request, rsp responseWriter) commandFn {
-			return func() {
-				SendVersion(req, rsp)
-			}
-		}},
-	}
+	router := router{}
+	router.bot = "@" + session.State.User.Username
+	router.addRoute("announce", func(req request, rsp responseWriter) {
+		SetAnnounce(req, rsp, db)
+	})
+	router.addRoute("help", func(req request, rsp responseWriter) {
+		SendHelp(req, rsp)
+	})
+	router.addRoute("karma", func(req request, rsp responseWriter) {
+		CheckKarma(req, rsp, db)
+	})
+	router.addRoute("bot", func(req request, rsp responseWriter) {
+		Bot(req, rsp, db)
+	})
+	router.addRoute("top", func(req request, rsp responseWriter) {
+		Top(req, rsp, db)
+	})
+	router.addRoute("version", func(req request, rsp responseWriter) {
+		SendVersion(req, rsp)
+	})
+
+	// just check for karma operations by default if no other commands
+	// were matched
+	router.addRoute("*", func(req request, rsp responseWriter) {
+		ModKarma(req, rsp, db)
+	})
 
 	session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		// don't process messages sent by the bot
@@ -130,44 +110,12 @@ func main() {
 		}
 
 		isDM := len(m.GuildID) == 0
-		bot := "@" + s.State.User.Username
-
 		msg := m.ContentWithMentionsReplaced()
-		for _, c := range cmds {
-			var spacer string
-			if c.hasArgs {
-				spacer = " "
-			}
 
-			var strip string
-			fullPrefix := fmt.Sprintf("%s %s%s", bot, c.verb, spacer)
-			dmPrefix := fmt.Sprintf("%s%s", c.verb, spacer)
-			if strings.HasPrefix(msg, fullPrefix) {
-				strip = fullPrefix
-			} else if isDM && strings.HasPrefix(msg, dmPrefix) {
-				strip = dmPrefix
-			} else {
-				// message doesn't appear to be addressing the bot with a command
-				// just move on
-				continue
-			}
-
-			// remove the @Bot (if it's there) as well as the command text so
-			// the command processing layer doesn't need to worry about it
-			msg = msg[len(strip):]
-
-			req := request{isDM: len(m.Message.GuildID) == 0, guildID: m.Message.GuildID, message: msg}
-			rsp := response{s, m.Message}
-
-			workQueue <- c.command(req, rsp)
-			return
-		}
-
-		// default action is to just check for karma operations
+		req := request{isDM: isDM, guildID: m.Message.GuildID, message: msg}
+		rsp := response{s, m.Message}
 		workQueue <- func() {
-			req := request{isDM: len(m.Message.GuildID) == 0, guildID: m.Message.GuildID, message: msg}
-			rsp := response{s, m.Message}
-			ModKarma(req, rsp, db)
+			router.route(req, rsp)
 		}
 	})
 
@@ -190,7 +138,7 @@ func main() {
 	session.Close()
 }
 
-func worker(workQueue <-chan commandFn, cancel <-chan struct{}) {
+func worker(workQueue <-chan func(), cancel <-chan struct{}) {
 	for {
 		select {
 		case <-cancel:
