@@ -43,7 +43,7 @@ func CheckKarma(ctx *Context) {
 
 	reply := strings.Builder{}
 
-	for subject, _ := range subjects {
+	for subject := range subjects {
 		var entity Entity
 		db.Where(&Entity{GuildID: guildID, Name: subject}).First(&entity)
 		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, subject, entity.Karma))
