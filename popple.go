@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"gorm.io/driver/sqlite"
@@ -36,6 +37,7 @@ func main() {
 	numWorkers := flag.Uint("workers", DefaultWorkers, "Number of worker threads to spawn")
 	dbFile := flag.String("db", Database, "Path to database file")
 	numJobs := flag.Uint("jobs", DefaultJobs, "Maximum queue size for jobs")
+	timeout := flag.Uint("deadline", 3, "seconds to wait for workers to exit when shutting down")
 	flag.Parse()
 
 	if *tokenFile == "" {
@@ -76,10 +78,12 @@ func main() {
 	log.Printf("Popple is online, running version %s\n", Version)
 
 	cancel := make(chan struct{})
+	cancelAck := make(chan uint)
 	workQueue := make(chan func(), *numJobs)
 
 	for i := uint(0); i < *numWorkers; i++ {
-		go worker(workQueue, cancel)
+		log.Printf("starting worker %d\n", i)
+		go worker(i, workQueue, cancel, cancelAck)
 	}
 
 	router := router{}
@@ -128,17 +132,44 @@ func main() {
 	sessionChannel := make(chan os.Signal, 1)
 	signal.Notify(sessionChannel, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sessionChannel
+	log.Println("received signal")
+
+	close(cancel) // workers will read zero-value of this from a closed chan
 	detachMessageCreateHandler()
-	close(cancel)
-	close(workQueue)
+	log.Println("detached handler, sending cancel request to workers")
+
+	workersRemaining := *numWorkers
+
+	deadline := time.After(time.Duration(*timeout) * time.Second)
+
+workerwait:
+	for {
+		select {
+		case <-deadline:
+			log.Println("cancellation deadline has passed")
+			break workerwait
+		case wid := <-cancelAck:
+			workersRemaining--
+			log.Printf("worker %d acknowledged cancellation\n", wid)
+			if workersRemaining == 0 {
+				close(workQueue)
+				log.Println("all workers have acknowledged cancellation")
+				break workerwait
+			}
+		}
+	}
+	if workersRemaining != 0 {
+		log.Printf("%d workers failed to acknowledge cancellation, moving on without them\n", workersRemaining)
+	}
 
 	session.Close()
 }
 
-func worker(workQueue <-chan func(), cancel <-chan struct{}) {
+func worker(wid uint, workQueue <-chan func(), cancel <-chan struct{}, cancelAck chan<- uint) {
 	for {
 		select {
 		case <-cancel:
+			cancelAck <- wid
 			return
 		case cmd := <-workQueue:
 			cmd()
