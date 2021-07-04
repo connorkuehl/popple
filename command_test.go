@@ -503,7 +503,7 @@ func makeScratchDB(t *testing.T) (*gorm.DB, func()) {
 		t.Fatalf("%s", err)
 	}
 
-	db.AutoMigrate(&Entity{}, &Config{})
+	_ = db.AutoMigrate(&Entity{}, &Config{})
 
 	return db, func() {
 		os.Remove(dbName)
