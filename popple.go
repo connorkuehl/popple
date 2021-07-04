@@ -69,6 +69,12 @@ func main() {
 		log.Fatalf("Failed to initialize Discord library: %s\n", err)
 	}
 
+	err = session.Open()
+	if err != nil {
+		log.Fatalf("Error connecting to Discord: %s\n", err)
+	}
+	log.Printf("Popple is online, running version %s\n", Version)
+
 	cancel := make(chan struct{})
 	workQueue := make(chan func(), *numJobs)
 
@@ -118,16 +124,6 @@ func main() {
 			router.route(req, rsp)
 		}
 	})
-
-	err = session.Open()
-	if err != nil {
-		/* Should these be `defer`red? */
-		close(cancel)
-		close(workQueue)
-		log.Fatalf("Error connecting to Discord: %s\n", err)
-	}
-
-	log.Printf("Popple is online, running version %s\n", Version)
 
 	sessionChannel := make(chan os.Signal, 1)
 	signal.Notify(sessionChannel, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
