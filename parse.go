@@ -188,6 +188,7 @@ type item struct {
 
 type itemType int
 
+//nolint:golint,unused
 const (
 	itemError        itemType = iota // error occurred during lexing
 	itemText                         // alphanumeric
