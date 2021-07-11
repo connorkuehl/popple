@@ -37,7 +37,7 @@ func main() {
 	numWorkers := flag.Uint("workers", DefaultWorkers, "Number of worker threads to spawn")
 	dbFile := flag.String("db", Database, "Path to database file")
 	numJobs := flag.Uint("jobs", DefaultJobs, "Maximum queue size for jobs")
-	timeout := flag.Uint("deadline", 3, "seconds to wait for workers to exit when shutting down")
+	timeout := flag.Duration("deadline", 3*time.Second, "Duration to wait for workers to exit when shutting down. Its accepts decimal number with unit suffix such as \"300ms\", \"3s\". Valid time units are \"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\".")
 	flag.Parse()
 
 	if *tokenFile == "" {
@@ -140,7 +140,7 @@ func main() {
 
 	workersRemaining := *numWorkers
 
-	deadline := time.After(time.Duration(*timeout) * time.Second)
+	deadline := time.After(*timeout)
 
 workerwait:
 	for {
