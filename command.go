@@ -292,7 +292,6 @@ func formatKarmaLeaderboardEntry(who string, karma int) string {
 func marshalSubjects(subs []Subject) map[string]int {
 	subMap := make(map[string]int)
 	for _, s := range subs {
-		/* associate @user with user */
 		name := s.Name
 		karma := subMap[name]
 		karma += s.Karma
