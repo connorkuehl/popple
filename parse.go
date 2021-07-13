@@ -71,6 +71,8 @@ func parseSubject(i item) Subject {
 
 func parseSubjectPlain(i item) Subject {
 	name := string(i.value)
+	name = strings.TrimPrefix(name, "@")
+
 	karma := 0
 	switch {
 	case strings.HasSuffix(name, "++"):
