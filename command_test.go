@@ -68,6 +68,8 @@ func TestModKarma(t *testing.T) {
 		{"basic increment", request{message: "Test++"}, []string{testFormatKarmaStatement("Test", 1)}},
 		{"basic decrement", request{message: "Test--"}, []string{testFormatKarmaStatement("Test", -1)}},
 		{"many operations", request{message: "NoKarma SomeKarma++ LessKarma-- NoMoreKarma"}, []string{testFormatKarmaStatement("SomeKarma", 1), testFormatKarmaStatement("LessKarma", -1)}},
+		{"a paren subject can have a leading @", request{message: "(@holdo)++"}, []string{testFormatKarmaStatement("@holdo", 1)}},
+		{"a plaintext subject has @ prefix stripped", request{message: "@holdo++"}, []string{testFormatKarmaStatement("holdo", 1)}},
 	}
 
 	for _, tt := range interactiveCases {

@@ -37,6 +37,9 @@ func TestParseSubjects(t *testing.T) {
 		{"bumping empty parens yields nothing", "()++ ()--", []Subject{}},
 		{"an unclosed tick does not prevent parsing other subjects", "asdf `hi`` hello++", []Subject{{"asdf", 0}, {"hello", 1}}},
 		{"a paren subject ending with a single character is taken as plaintext", "(hi)+", []Subject{{"(hi)+", 0}}},
+		{"a paren subject can have a leading @", "(@hi)++", []Subject{{"@hi", 1}}},
+		{"a plaintext subject will have a leading @ stripped", "@hi++", []Subject{{"hi", 1}}},
+		{"@++", "@++", []Subject{}},
 	}
 
 	for _, tt := range tests {

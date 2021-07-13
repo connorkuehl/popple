@@ -294,9 +294,6 @@ func marshalSubjects(subs []Subject) map[string]int {
 	for _, s := range subs {
 		/* associate @user with user */
 		name := s.Name
-		if len(name) > 1 && name[0] == '@' {
-			name = name[1:]
-		}
 		karma := subMap[name]
 		karma += s.Karma
 		subMap[name] = karma
