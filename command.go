@@ -8,6 +8,7 @@ package main
 // dispatch table in job.go
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"strconv"
@@ -149,14 +150,18 @@ func SetAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 		return
 	}
 
-	message := req.message
+	scanner := bufio.NewScanner(strings.NewReader(req.message))
+	scanner.Split(bufio.ScanWords)
+	_ = scanner.Scan()
+	setting := scanner.Text()
 
 	var on bool
-	if strings.HasPrefix(message, "on") || strings.HasPrefix(message, "yes") {
+	switch {
+	case setting == "on" || setting == "yes":
 		on = true
-	} else if strings.HasPrefix(message, "off") || strings.HasPrefix(message, "no") {
+	case setting == "off" || setting == "no":
 		on = false
-	} else {
+	default:
 		err := rsp.SendReply("Announce settings are: \"yes\", \"no\", \"on\", \"off\"")
 		if err != nil {
 			log.Printf("Error when sending reply: %v", err)
