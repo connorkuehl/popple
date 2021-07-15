@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -120,7 +121,7 @@ func main() {
 		}
 
 		isDM := len(m.GuildID) == 0
-		msg := m.ContentWithMentionsReplaced()
+		msg := strings.TrimSpace(m.ContentWithMentionsReplaced())
 
 		req := request{isDM: isDM, guildID: m.Message.GuildID, message: msg}
 		rsp := response{s, m.Message}
