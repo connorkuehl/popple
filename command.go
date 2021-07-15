@@ -12,6 +12,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/bwmarrin/discordgo"
 	"gorm.io/gorm"
@@ -33,22 +34,37 @@ func (r *router) addRoute(name string, work commandFn) {
 }
 
 func (r *router) route(req request, rsp responseWriter) {
+	matchers := []struct {
+		prefixer         func(r route) string
+		preconditionsMet func(r route) bool
+	}{
+		{prefixer: func(rt route) string { return fmt.Sprintf("%s %s", r.bot, rt.match) }, preconditionsMet: func(rt route) bool { return true }},
+		{prefixer: func(rt route) string { return rt.match }, preconditionsMet: func(rt route) bool { return req.isDM }},
+	}
+
 	for _, route := range r.routes {
-		var stripPrefix string
-		fullPrefix := fmt.Sprintf("%s %s", r.bot, route.match)
-		dmPrefix := route.match
-
-		if strings.HasPrefix(req.message, fullPrefix) {
-			stripPrefix = fullPrefix
-		} else if req.isDM && strings.HasPrefix(req.message, dmPrefix) {
-			stripPrefix = dmPrefix
-		} else {
-			continue
+		for _, matcher := range matchers {
+			prefix := matcher.prefixer(route)
+			// ensure the command verb is its own word
+			//		ok: "@Popple help"
+			//		no: "@Popple helpasdf"
+			//		ok: "@Popple announce on"
+			//		no: "@Popple announceon"
+			//
+			// previously, only the prefix was checked, meaning "@Popple helpasdf"
+			// would route to "@Popple help" and "asdf" was passed on as the message
+			// body/arguments
+			if message := strings.TrimPrefix(req.message, prefix); message != req.message && matcher.preconditionsMet(route) {
+				// ensure the message is an entire command ("@Popple help") or ensure
+				// that the command prefix is separated from the rest of the message/
+				// arguments by whitespace ("@Popple announce on")
+				if trimmed := strings.TrimLeftFunc(message, unicode.IsSpace); len(message) == 0 || trimmed != message {
+					req.message = trimmed
+					route.cmd(req, rsp)
+					return
+				}
+			}
 		}
-
-		req.message = strings.TrimSpace(req.message[len(stripPrefix):])
-		route.cmd(req, rsp)
-		return
 	}
 
 	if r.catchall.cmd != nil {

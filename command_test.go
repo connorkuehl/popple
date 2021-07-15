@@ -393,6 +393,22 @@ func TestRouter(t *testing.T) {
 				t.Errorf("fell into catchall, should have been routed elsewhere")
 			}},
 		}},
+		{"commands must be individual word", request{message: bot + " helpasdf"}, []route{
+			{"help", func(req request, rsp responseWriter) {
+				t.Errorf("should have fallen into catchall helpasdf != help: %#v", req)
+			}},
+			{"*", func(req request, rsp responseWriter) {
+				// yay
+			}},
+		}},
+		{"commands must be individual word in DMs", request{message: " helpasdf", isDM: true}, []route{
+			{"help", func(req request, rsp responseWriter) {
+				t.Errorf("should have fallen into catchall helpasdf != help: %#v", req)
+			}},
+			{"*", func(req request, rsp responseWriter) {
+				// yay
+			}},
+		}},
 	}
 
 	for _, tt := range cases {
