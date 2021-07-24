@@ -112,9 +112,9 @@ func (r response) React(emojiID string) error {
 
 type commandFn func(req request, rsp responseWriter)
 
-// CheckKarma allows server inhabitants to query karma levels
+// checkKarma allows server inhabitants to query karma levels
 // for subjects they have incremented or decremented over time.
-func CheckKarma(req request, rsp responseWriter, db *gorm.DB) {
+func checkKarma(req request, rsp responseWriter, db *gorm.DB) {
 	if req.isDM {
 		return
 	}
@@ -126,9 +126,9 @@ func CheckKarma(req request, rsp responseWriter, db *gorm.DB) {
 	reply := strings.Builder{}
 
 	for subject := range subjects {
-		var entity Entity
-		db.Where(&Entity{GuildID: req.guildID, Name: subject}).First(&entity)
-		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, subject, entity.Karma))
+		var ent entity
+		db.Where(&entity{guildID: req.guildID, Name: subject}).First(&ent)
+		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, subject, ent.Karma))
 		sep = " "
 	}
 
@@ -143,9 +143,9 @@ func CheckKarma(req request, rsp responseWriter, db *gorm.DB) {
 	}
 }
 
-// SetAnnounce allows server inhabitants to enable or disable Popple
+// setAnnounce allows server inhabitants to enable or disable Popple
 // announcements when karma is modified from a message.
-func SetAnnounce(req request, rsp responseWriter, db *gorm.DB) {
+func setAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 	if req.isDM {
 		return
 	}
@@ -169,9 +169,9 @@ func SetAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 		return
 	}
 
-	var cfg Config
-	db.Where(&Config{GuildID: req.guildID}).FirstOrCreate(&cfg)
-	cfg.NoAnnounce = !on
+	var cfg config
+	db.Where(&config{guildID: req.guildID}).FirstOrCreate(&cfg)
+	cfg.noAnnounce = !on
 	db.Save(cfg)
 
 	err := rsp.React("👍")
@@ -180,8 +180,8 @@ func SetAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 	}
 }
 
-// SendHelp allows server inhabitants to request usage information.
-func SendHelp(req request, rsp responseWriter) {
+// sendHelp allows server inhabitants to request usage information.
+func sendHelp(req request, rsp responseWriter) {
 	reply := "Usage: https://github.com/connorkuehl/popple#usage"
 
 	err := rsp.SendMessageToChannel(reply)
@@ -190,22 +190,22 @@ func SendHelp(req request, rsp responseWriter) {
 	}
 }
 
-// SendVersion allows server inhabitants to see what Popple revision
+// sendVersion allows server inhabitants to see what Popple revision
 // is running.
-func SendVersion(req request, rsp responseWriter) {
+func sendVersion(req request, rsp responseWriter) {
 	err := rsp.SendMessageToChannel(fmt.Sprintf("I'm running version %s.", Version))
 	if err != nil {
 		log.Printf("Error sending version: %s", err)
 	}
 }
 
-// ModKarma is the default Popple action that will be taken when no other
+// modKarma is the default Popple action that will be taken when no other
 // subcommand is identified in the message.
 //
 // Popple will scan the entire message, parse out any karma subjects,
 // count up the karma, and reply with the karma modifications that the
 // message has made resulted in.
-func ModKarma(req request, rsp responseWriter, db *gorm.DB) {
+func modKarma(req request, rsp responseWriter, db *gorm.DB) {
 	if req.isDM {
 		return
 	}
@@ -220,16 +220,16 @@ func ModKarma(req request, rsp responseWriter, db *gorm.DB) {
 			continue
 		}
 
-		var entity Entity
+		var ent entity
 
-		db.Where(&Entity{GuildID: req.guildID, Name: subject}).FirstOrCreate(&entity)
-		entity.Karma += netKarma
+		db.Where(&entity{guildID: req.guildID, Name: subject}).FirstOrCreate(&ent)
+		ent.Karma += netKarma
 
-		reply.WriteString(fmt.Sprintf("%s%s.", sep, formatKarmaStatement(entity.Name, entity.Karma)))
-		if entity.Karma == 0 {
-			db.Delete(entity)
+		reply.WriteString(fmt.Sprintf("%s%s.", sep, formatKarmaStatement(ent.Name, ent.Karma)))
+		if ent.Karma == 0 {
+			db.Delete(ent)
 		} else {
-			db.Save(entity)
+			db.Save(ent)
 		}
 		sep = " "
 	}
@@ -238,10 +238,10 @@ func ModKarma(req request, rsp responseWriter, db *gorm.DB) {
 		return
 	}
 
-	var cfg Config
-	db.Where(&Config{GuildID: req.guildID}).FirstOrCreate(&cfg)
+	var cfg config
+	db.Where(&config{guildID: req.guildID}).FirstOrCreate(&cfg)
 
-	if !cfg.NoAnnounce {
+	if !cfg.noAnnounce {
 		err := rsp.SendMessageToChannel(reply.String())
 		if err != nil {
 			log.Printf("Error when sending reply to channel: %s\n", err)
@@ -249,15 +249,15 @@ func ModKarma(req request, rsp responseWriter, db *gorm.DB) {
 	}
 }
 
-// Bot allows server inhabitants to see who is "in the lead" for
+// bot allows server inhabitants to see who is "in the lead" for
 // the LEAST amount of karma.
-func Bot(req request, rsp responseWriter, db *gorm.DB) {
+func bot(req request, rsp responseWriter, db *gorm.DB) {
 	board(req, rsp, db, "asc")
 }
 
 // Top allows server inhabitants to see who is in the lead in terms
 // of karma accumulated.
-func Top(req request, rsp responseWriter, db *gorm.DB) {
+func top(req request, rsp responseWriter, db *gorm.DB) {
 	board(req, rsp, db, "desc")
 }
 
@@ -281,8 +281,8 @@ func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
 		return
 	}
 
-	var entities []Entity
-	db.Where(&Entity{GuildID: req.guildID}).Order(fmt.Sprintf("karma %s", sort)).Limit(limit).Find(&entities)
+	var entities []entity
+	db.Where(&entity{guildID: req.guildID}).Order(fmt.Sprintf("karma %s", sort)).Limit(limit).Find(&entities)
 
 	board := strings.Builder{}
 	for _, entity := range entities {
@@ -310,12 +310,12 @@ func formatKarmaLeaderboardEntry(who string, karma int) string {
 
 // marshalSubjects deduplicates the list of Subjects that ParseSubjects
 // returns.
-func marshalSubjects(subs []Subject) map[string]int {
+func marshalSubjects(subs []subject) map[string]int {
 	subMap := make(map[string]int)
 	for _, s := range subs {
-		name := s.Name
+		name := s.name
 		karma := subMap[name]
-		karma += s.Karma
+		karma += s.karma
 		subMap[name] = karma
 	}
 
