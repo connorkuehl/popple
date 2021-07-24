@@ -23,20 +23,20 @@ import (
 // Example: (Hello World)-- -> subject name: Hello World -1 karma
 
 // Subject represents a karma operation on a named entity.
-type Subject struct {
-	Name  string
-	Karma int
+type subject struct {
+	name  string
+	karma int
 }
 
 // ParseSubjects parses subjects from text.
-func ParseSubjects(s string) []Subject {
-	subjects := make([]Subject, 0)
+func ParseSubjects(s string) []subject {
+	subjects := make([]subject, 0)
 
 	_, items := lex([]rune(s))
 	for {
 		if i, ok := <-items; ok {
 			s := parseSubject(i)
-			if len(s.Name) == 0 {
+			if len(s.name) == 0 {
 				continue
 			}
 			subjects = append(subjects, s)
@@ -58,18 +58,18 @@ func lex(input []rune) (*lexer, chan item) {
 	return l, l.items
 }
 
-func parseSubject(i item) Subject {
+func parseSubject(i item) subject {
 	switch i.kind {
 	case itemText:
 		return parseSubjectPlain(i)
 	case itemTextInParens:
 		return parseSubjectParens(i)
 	default:
-		return Subject{}
+		return subject{}
 	}
 }
 
-func parseSubjectPlain(i item) Subject {
+func parseSubjectPlain(i item) subject {
 	name := string(i.value)
 	name = strings.TrimPrefix(name, "@")
 
@@ -83,10 +83,10 @@ func parseSubjectPlain(i item) Subject {
 	if karma != 0 {
 		name = name[:len(name)-2]
 	}
-	return Subject{name, karma}
+	return subject{name, karma}
 }
 
-func parseSubjectParens(i item) Subject {
+func parseSubjectParens(i item) subject {
 	name := string(i.value)
 	karma := 0
 	switch {
@@ -101,7 +101,7 @@ func parseSubjectParens(i item) Subject {
 	default:
 		name = name[1 : len(name)-1]
 	}
-	return Subject{name, karma}
+	return subject{name, karma}
 }
 
 type lexer struct {

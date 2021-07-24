@@ -64,8 +64,8 @@ func main() {
 		log.Fatalf("Failed to read token from %s\n", *tokenFile)
 	}
 
-	_ = db.AutoMigrate(&Config{})
-	_ = db.AutoMigrate(&Entity{})
+	_ = db.AutoMigrate(&config{})
+	_ = db.AutoMigrate(&entity{})
 
 	session, err := discordgo.New("Bot " + string(token))
 	if err != nil {
@@ -90,28 +90,28 @@ func main() {
 	router := router{}
 	router.bot = "@" + session.State.User.Username
 	router.addRoute("announce", func(req request, rsp responseWriter) {
-		SetAnnounce(req, rsp, db)
+		setAnnounce(req, rsp, db)
 	})
 	router.addRoute("help", func(req request, rsp responseWriter) {
-		SendHelp(req, rsp)
+		sendHelp(req, rsp)
 	})
 	router.addRoute("karma", func(req request, rsp responseWriter) {
-		CheckKarma(req, rsp, db)
+		checkKarma(req, rsp, db)
 	})
 	router.addRoute("bot", func(req request, rsp responseWriter) {
-		Bot(req, rsp, db)
+		bot(req, rsp, db)
 	})
 	router.addRoute("top", func(req request, rsp responseWriter) {
-		Top(req, rsp, db)
+		top(req, rsp, db)
 	})
 	router.addRoute("version", func(req request, rsp responseWriter) {
-		SendVersion(req, rsp)
+		sendVersion(req, rsp)
 	})
 
 	// just check for karma operations by default if no other commands
 	// were matched
 	router.addRoute("*", func(req request, rsp responseWriter) {
-		ModKarma(req, rsp, db)
+		modKarma(req, rsp, db)
 	})
 
 	detachMessageCreateHandler := session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {

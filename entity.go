@@ -2,8 +2,8 @@ package main
 
 import "github.com/jinzhu/gorm"
 
-// Entity represents a karma subject in the persistence layer.
-type Entity struct {
+// entity represents a karma subject in the persistence layer.
+type entity struct {
 	gorm.Model
 	Name    string
 	GuildID string

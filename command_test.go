@@ -27,7 +27,7 @@ func TestCheckKarma(t *testing.T) {
 	}
 
 	db, cleanup := makeScratchDB(t)
-	populateEntitiesInDB(db, []Entity{
+	populateEntitiesInDB(db, []entity{
 		{Name: "Popple", Karma: 1},
 		{Name: "Gophers", Karma: 12},
 	})
@@ -36,7 +36,7 @@ func TestCheckKarma(t *testing.T) {
 	for _, tt := range interactiveCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			CheckKarma(tt.input, &rsp, db)
+			checkKarma(tt.input, &rsp, db)
 			assertNumResponses(t, rsp, 1)
 			assertHasAllSubstrings(t, rsp.responses[0].value, tt.needles)
 		})
@@ -53,7 +53,7 @@ func TestCheckKarma(t *testing.T) {
 	for _, tt := range ignoreCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			CheckKarma(tt.input, &rsp, db)
+			checkKarma(tt.input, &rsp, db)
 			assertNumResponses(t, rsp, 0)
 		})
 	}
@@ -78,7 +78,7 @@ func TestModKarma(t *testing.T) {
 			defer cleanup()
 
 			var rsp responseSink
-			ModKarma(tt.input, &rsp, db)
+			modKarma(tt.input, &rsp, db)
 			assertNumResponses(t, rsp, 1)
 			assertHasAllSubstrings(t, rsp.responses[0].value, tt.needles)
 		})
@@ -95,7 +95,7 @@ func TestModKarma(t *testing.T) {
 	for _, tt := range ignoreCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			ModKarma(tt.input, &rsp, nil)
+			modKarma(tt.input, &rsp, nil)
 			assertNumResponses(t, rsp, 0)
 		})
 	}
@@ -103,12 +103,12 @@ func TestModKarma(t *testing.T) {
 	dataCases := []struct {
 		name   string
 		input  request
-		before []Entity
-		after  []Entity
+		before []entity
+		after  []entity
 	}{
-		{"reducing to zero removes row", request{message: "Test--"}, []Entity{{Name: "Test", Karma: 1}}, []Entity{}},
-		{"adjusting karma is saved to existing row", request{message: "Test++"}, []Entity{{Name: "Test", Karma: 1}}, []Entity{{Name: "Test", Karma: 2}}},
-		{"the first increment adds a new row", request{message: "Test++"}, []Entity{}, []Entity{{Name: "Test", Karma: 1}}},
+		{"reducing to zero removes row", request{message: "Test--"}, []entity{{Name: "Test", Karma: 1}}, []entity{}},
+		{"adjusting karma is saved to existing row", request{message: "Test++"}, []entity{{Name: "Test", Karma: 1}}, []entity{{Name: "Test", Karma: 2}}},
+		{"the first increment adds a new row", request{message: "Test++"}, []entity{}, []entity{{Name: "Test", Karma: 1}}},
 	}
 
 	for _, tt := range dataCases {
@@ -118,9 +118,9 @@ func TestModKarma(t *testing.T) {
 			populateEntitiesInDB(db, tt.before)
 
 			var rsp responseSink
-			ModKarma(tt.input, &rsp, db)
+			modKarma(tt.input, &rsp, db)
 
-			var actual []Entity
+			var actual []entity
 			db.Find(&actual)
 
 			assertDataChanged(t, actual, tt.after)
@@ -133,29 +133,29 @@ func TestSetAnnounce(t *testing.T) {
 		name              string
 		input             request
 		expectedResponses []testResponse
-		before, after     Config
+		before, after     config
 	}{
-		{"on", request{message: "on"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: false}},
-		{"off", request{message: "off"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: true}},
-		{"yes", request{message: "yes"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: false}},
-		{"no", request{message: "no"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: true}},
-		{"invalid setting", request{message: "asdf"}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, Config{}, Config{}},
-		{"empty", request{message: ""}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, Config{}, Config{}},
+		{"on", request{message: "on"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: false}},
+		{"off", request{message: "off"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: true}},
+		{"yes", request{message: "yes"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: false}},
+		{"no", request{message: "no"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: true}},
+		{"invalid setting", request{message: "asdf"}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, config{}, config{}},
+		{"empty", request{message: ""}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, config{}, config{}},
 	}
 
 	for _, tt := range interactiveCases {
 		t.Run(tt.name, func(t *testing.T) {
 			db, cleanup := makeScratchDB(t)
 			defer cleanup()
-			populateConfigsInDB(db, []Config{tt.before})
+			populateConfigsInDB(db, []config{tt.before})
 
 			var rsp responseSink
-			SetAnnounce(tt.input, &rsp, db)
+			setAnnounce(tt.input, &rsp, db)
 
 			reflect.DeepEqual(tt.expectedResponses, rsp.responses)
 
-			var actual Config
-			db.Where(&Config{}).First(&actual)
+			var actual config
+			db.Where(&config{}).First(&actual)
 			if actual.NoAnnounce != tt.after.NoAnnounce {
 				t.Errorf("expected NoAnnounce=%v got %v", tt.after.NoAnnounce, actual.NoAnnounce)
 			}
@@ -172,7 +172,7 @@ func TestSetAnnounce(t *testing.T) {
 	for _, tt := range ignoreCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			SetAnnounce(tt.input, &rsp, nil)
+			setAnnounce(tt.input, &rsp, nil)
 			assertNumResponses(t, rsp, 0)
 		})
 	}
@@ -191,7 +191,7 @@ func TestSendHelp(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			SendHelp(tt.input, &rsp)
+			sendHelp(tt.input, &rsp)
 			if !reflect.DeepEqual(rsp.responses, tt.expectedResponses) {
 				t.Errorf("expected %#v got %#v", tt.expectedResponses, rsp.responses)
 			}
@@ -212,7 +212,7 @@ func TestSendVersion(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			SendVersion(tt.input, &rsp)
+			sendVersion(tt.input, &rsp)
 
 			if !reflect.DeepEqual(rsp.responses, tt.expectedResponses) {
 				t.Errorf("expected %#v got %#v", tt.expectedResponses, rsp.responses)
@@ -225,7 +225,7 @@ func TestTop(t *testing.T) {
 	db, cleanup := makeScratchDB(t)
 	defer cleanup()
 
-	populateEntitiesInDB(db, []Entity{
+	populateEntitiesInDB(db, []entity{
 		{Name: "A", Karma: 10},
 		{Name: "B", Karma: 9},
 		{Name: "C", Karma: 8},
@@ -235,8 +235,8 @@ func TestTop(t *testing.T) {
 		{Name: "G", Karma: 4},
 		{Name: "H", Karma: 3},
 		{Name: "I", Karma: 2},
-		{Name: "J", Karma: 1},
 		{Name: "K", Karma: 0},
+		{Name: "J", Karma: 1},
 	})
 
 	cases := []struct {
@@ -244,7 +244,7 @@ func TestTop(t *testing.T) {
 		input    request
 		expected testResponse
 	}{
-		{"returns the top 3", request{message: "3"}, testResponse{responseChannelMessage, entityToLeaderboard([]Entity{
+		{"returns the top 3", request{message: "3"}, testResponse{responseChannelMessage, entityToLeaderboard([]entity{
 			{Name: "A", Karma: 10},
 			{Name: "B", Karma: 9},
 			{Name: "C", Karma: 8},
@@ -254,7 +254,7 @@ func TestTop(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			Top(tt.input, &rsp, db)
+			top(tt.input, &rsp, db)
 
 			assertNumResponses(t, rsp, 1)
 			if tt.expected != rsp.responses[0] {
@@ -275,7 +275,7 @@ func TestTop(t *testing.T) {
 	for _, tt := range ignoreCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			Top(tt.input, &rsp, db)
+			top(tt.input, &rsp, db)
 			assertNumResponses(t, rsp, 0)
 		})
 	}
@@ -285,7 +285,7 @@ func TestBot(t *testing.T) {
 	db, cleanup := makeScratchDB(t)
 	defer cleanup()
 
-	populateEntitiesInDB(db, []Entity{
+	populateEntitiesInDB(db, []entity{
 		{Name: "A", Karma: 10},
 		{Name: "B", Karma: 9},
 		{Name: "C", Karma: 8},
@@ -304,7 +304,7 @@ func TestBot(t *testing.T) {
 		input    request
 		expected testResponse
 	}{
-		{"returns the bottom 3", request{message: "3"}, testResponse{responseChannelMessage, entityToLeaderboard([]Entity{
+		{"returns the bottom 3", request{message: "3"}, testResponse{responseChannelMessage, entityToLeaderboard([]entity{
 			{Name: "K", Karma: 0},
 			{Name: "J", Karma: 1},
 			{Name: "I", Karma: 2},
@@ -314,7 +314,7 @@ func TestBot(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			Bot(tt.input, &rsp, db)
+			bot(tt.input, &rsp, db)
 
 			assertNumResponses(t, rsp, 1)
 			if tt.expected != rsp.responses[0] {
@@ -335,7 +335,7 @@ func TestBot(t *testing.T) {
 	for _, tt := range ignoreCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			Top(tt.input, &rsp, db)
+			top(tt.input, &rsp, db)
 			assertNumResponses(t, rsp, 0)
 		})
 	}
@@ -424,7 +424,7 @@ func TestRouter(t *testing.T) {
 	}
 }
 
-func entityToLeaderboard(entities []Entity) string {
+func entityToLeaderboard(entities []entity) string {
 	builder := strings.Builder{}
 	for _, e := range entities {
 		builder.WriteString(testFormatKarmaLeaderboardEntry(e.Name, e.Karma))
@@ -446,12 +446,12 @@ func assertHasAllSubstrings(t *testing.T, haystack string, needles []string) {
 	}
 }
 
-func assertDataChanged(t *testing.T, actual, expected []Entity) {
+func assertDataChanged(t *testing.T, actual, expected []entity) {
 	if len(actual) != len(expected) {
 		t.Errorf("number of actual results different from expected: actual = %#v expected = %#v", actual, expected)
 	}
 
-	var expectMap = make(map[string]Entity)
+	var expectMap = make(map[string]entity)
 	for _, a := range actual {
 		expectMap[a.Name] = a
 	}
@@ -471,17 +471,17 @@ type responseSink struct {
 	responses []testResponse
 }
 
-func (r *responseSink) SendMessageToChannel(msg string) error {
+func (r *responseSink) sendMessageToChannel(msg string) error {
 	r.sink(responseChannelMessage, msg)
 	return nil
 }
 
-func (r *responseSink) SendReply(msg string) error {
+func (r *responseSink) sendReply(msg string) error {
 	r.sink(responseReply, msg)
 	return nil
 }
 
-func (r *responseSink) React(emoji string) error {
+func (r *responseSink) react(emoji string) error {
 	r.sink(responseEmoji, emoji)
 	return nil
 }
@@ -521,20 +521,20 @@ func makeScratchDB(t *testing.T) (*gorm.DB, func()) {
 		t.Fatalf("%s", err)
 	}
 
-	_ = db.AutoMigrate(&Entity{}, &Config{})
+	_ = db.AutoMigrate(&entity{}, &config{})
 
 	return db, func() {
 		os.Remove(dbName)
 	}
 }
 
-func populateEntitiesInDB(db *gorm.DB, rows []Entity) {
+func populateEntitiesInDB(db *gorm.DB, rows []entity) {
 	for _, r := range rows {
 		db.Create(&r)
 	}
 }
 
-func populateConfigsInDB(db *gorm.DB, rows []Config) {
+func populateConfigsInDB(db *gorm.DB, rows []config) {
 	for _, c := range rows {
 		db.Create(&c)
 	}
