@@ -137,8 +137,7 @@ func checkKarma(req request, rsp responseWriter, db *gorm.DB) {
 		return
 	}
 
-	err := rsp.sendMessageToChannel(reply.String())
-	if err != nil {
+	if err := rsp.sendMessageToChannel(reply.String()); err != nil {
 		log.Printf("Error when sending reply to channel: %s\n", err)
 	}
 }
@@ -162,8 +161,7 @@ func setAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 	case setting == "off" || setting == "no":
 		on = false
 	default:
-		err := rsp.sendReply("Announce settings are: \"yes\", \"no\", \"on\", \"off\"")
-		if err != nil {
+		if err := rsp.sendReply("Announce settings are: \"yes\", \"no\", \"on\", \"off\""); err != nil {
 			log.Printf("Error when sending reply: %v", err)
 		}
 		return
@@ -174,8 +172,7 @@ func setAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 	cfg.NoAnnounce = !on
 	db.Save(cfg)
 
-	err := rsp.react("👍")
-	if err != nil {
+	if err := rsp.react("👍"); err != nil {
 		log.Printf("Error when sending reply: %v", err)
 	}
 }
@@ -184,8 +181,7 @@ func setAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 func sendHelp(req request, rsp responseWriter) {
 	reply := "Usage: https://github.com/connorkuehl/popple#usage"
 
-	err := rsp.sendMessageToChannel(reply)
-	if err != nil {
+	if err := rsp.sendMessageToChannel(reply); err != nil {
 		log.Printf("Error sending message: %s", err)
 	}
 }
@@ -193,8 +189,7 @@ func sendHelp(req request, rsp responseWriter) {
 // sendVersion allows server inhabitants to see what Popple revision
 // is running.
 func sendVersion(req request, rsp responseWriter) {
-	err := rsp.sendMessageToChannel(fmt.Sprintf("I'm running version %s.", Version))
-	if err != nil {
+	if err := rsp.sendMessageToChannel(fmt.Sprintf("I'm running version %s.", Version)); err != nil {
 		log.Printf("Error sending version: %s", err)
 	}
 }
@@ -242,8 +237,7 @@ func modKarma(req request, rsp responseWriter, db *gorm.DB) {
 	db.Where(&config{guildID: req.guildID}).FirstOrCreate(&cfg)
 
 	if !cfg.NoAnnounce {
-		err := rsp.sendMessageToChannel(reply.String())
-		if err != nil {
+		if err := rsp.sendMessageToChannel(reply.String()); err != nil {
 			log.Printf("Error when sending reply to channel: %s\n", err)
 		}
 	}
@@ -294,8 +288,7 @@ func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
 		return
 	}
 
-	err := rsp.sendMessageToChannel(board.String())
-	if err != nil {
+	if err := rsp.sendMessageToChannel(board.String()); err != nil {
 		log.Printf("Error sending message to channel: %s\n", err)
 	}
 }

@@ -72,8 +72,7 @@ func main() {
 		log.Fatalf("Failed to initialize Discord library: %s\n", err)
 	}
 
-	err = session.Open()
-	if err != nil {
+	if err := session.Open(); err != nil {
 		log.Fatalf("Error connecting to Discord: %s\n", err)
 	}
 	log.Printf("Popple is online, running version %s\n", Version)
