@@ -85,9 +85,9 @@ type request struct {
 }
 
 type responseWriter interface {
-	SendMessageToChannel(msg string) error
-	SendReply(msg string) error
-	React(emoji string) error
+	sendMessageToChannel(msg string) error
+	sendReply(msg string) error
+	react(emoji string) error
 }
 
 type response struct {
@@ -95,17 +95,17 @@ type response struct {
 	m *discordgo.Message
 }
 
-func (r response) SendMessageToChannel(msg string) error {
+func (r response) sendMessageToChannel(msg string) error {
 	_, err := r.s.ChannelMessageSend(r.m.ChannelID, msg)
 	return err
 }
 
-func (r response) SendReply(msg string) error {
+func (r response) sendReply(msg string) error {
 	_, err := r.s.ChannelMessageSendReply(r.m.ChannelID, msg, r.m.MessageReference)
 	return err
 }
 
-func (r response) React(emojiID string) error {
+func (r response) react(emojiID string) error {
 	err := r.s.MessageReactionAdd(r.m.ChannelID, r.m.ID, emojiID)
 	return err
 }
@@ -126,9 +126,9 @@ func checkKarma(req request, rsp responseWriter, db *gorm.DB) {
 	reply := strings.Builder{}
 
 	for subject := range subjects {
-		var ent entity
-		db.Where(&entity{guildID: req.guildID, Name: subject}).First(&ent)
-		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, subject, ent.Karma))
+		var entty entity
+		db.Where(&entity{GuildID: req.guildID, Name: subject}).First(&entty)
+		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, subject, entty.Karma))
 		sep = " "
 	}
 
@@ -137,7 +137,7 @@ func checkKarma(req request, rsp responseWriter, db *gorm.DB) {
 		return
 	}
 
-	err := rsp.SendMessageToChannel(reply.String())
+	err := rsp.sendMessageToChannel(reply.String())
 	if err != nil {
 		log.Printf("Error when sending reply to channel: %s\n", err)
 	}
@@ -162,7 +162,7 @@ func setAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 	case setting == "off" || setting == "no":
 		on = false
 	default:
-		err := rsp.SendReply("Announce settings are: \"yes\", \"no\", \"on\", \"off\"")
+		err := rsp.sendReply("Announce settings are: \"yes\", \"no\", \"on\", \"off\"")
 		if err != nil {
 			log.Printf("Error when sending reply: %v", err)
 		}
@@ -171,10 +171,10 @@ func setAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 
 	var cfg config
 	db.Where(&config{guildID: req.guildID}).FirstOrCreate(&cfg)
-	cfg.noAnnounce = !on
+	cfg.NoAnnounce = !on
 	db.Save(cfg)
 
-	err := rsp.React("👍")
+	err := rsp.react("👍")
 	if err != nil {
 		log.Printf("Error when sending reply: %v", err)
 	}
@@ -184,7 +184,7 @@ func setAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 func sendHelp(req request, rsp responseWriter) {
 	reply := "Usage: https://github.com/connorkuehl/popple#usage"
 
-	err := rsp.SendMessageToChannel(reply)
+	err := rsp.sendMessageToChannel(reply)
 	if err != nil {
 		log.Printf("Error sending message: %s", err)
 	}
@@ -193,7 +193,7 @@ func sendHelp(req request, rsp responseWriter) {
 // sendVersion allows server inhabitants to see what Popple revision
 // is running.
 func sendVersion(req request, rsp responseWriter) {
-	err := rsp.SendMessageToChannel(fmt.Sprintf("I'm running version %s.", Version))
+	err := rsp.sendMessageToChannel(fmt.Sprintf("I'm running version %s.", Version))
 	if err != nil {
 		log.Printf("Error sending version: %s", err)
 	}
@@ -220,16 +220,16 @@ func modKarma(req request, rsp responseWriter, db *gorm.DB) {
 			continue
 		}
 
-		var ent entity
+		var entty entity
 
-		db.Where(&entity{guildID: req.guildID, Name: subject}).FirstOrCreate(&ent)
-		ent.Karma += netKarma
+		db.Where(&entity{GuildID: req.guildID, Name: subject}).FirstOrCreate(&entty)
+		entty.Karma += netKarma
 
-		reply.WriteString(fmt.Sprintf("%s%s.", sep, formatKarmaStatement(ent.Name, ent.Karma)))
-		if ent.Karma == 0 {
-			db.Delete(ent)
+		reply.WriteString(fmt.Sprintf("%s%s.", sep, formatKarmaStatement(entty.Name, entty.Karma)))
+		if entty.Karma == 0 {
+			db.Delete(entty)
 		} else {
-			db.Save(ent)
+			db.Save(entty)
 		}
 		sep = " "
 	}
@@ -241,8 +241,8 @@ func modKarma(req request, rsp responseWriter, db *gorm.DB) {
 	var cfg config
 	db.Where(&config{guildID: req.guildID}).FirstOrCreate(&cfg)
 
-	if !cfg.noAnnounce {
-		err := rsp.SendMessageToChannel(reply.String())
+	if !cfg.NoAnnounce {
+		err := rsp.sendMessageToChannel(reply.String())
 		if err != nil {
 			log.Printf("Error when sending reply to channel: %s\n", err)
 		}
@@ -255,7 +255,7 @@ func bot(req request, rsp responseWriter, db *gorm.DB) {
 	board(req, rsp, db, "asc")
 }
 
-// Top allows server inhabitants to see who is in the lead in terms
+// top allows server inhabitants to see who is in the lead in terms
 // of karma accumulated.
 func top(req request, rsp responseWriter, db *gorm.DB) {
 	board(req, rsp, db, "desc")
@@ -282,7 +282,7 @@ func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
 	}
 
 	var entities []entity
-	db.Where(&entity{guildID: req.guildID}).Order(fmt.Sprintf("karma %s", sort)).Limit(limit).Find(&entities)
+	db.Where(&entity{GuildID: req.guildID}).Order(fmt.Sprintf("karma %s", sort)).Limit(limit).Find(&entities)
 
 	board := strings.Builder{}
 	for _, entity := range entities {
@@ -294,7 +294,7 @@ func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
 		return
 	}
 
-	err := rsp.SendMessageToChannel(board.String())
+	err := rsp.sendMessageToChannel(board.String())
 	if err != nil {
 		log.Printf("Error sending message to channel: %s\n", err)
 	}

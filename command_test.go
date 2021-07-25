@@ -135,10 +135,10 @@ func TestSetAnnounce(t *testing.T) {
 		expectedResponses []testResponse
 		before, after     config
 	}{
-		{"on", request{message: "on"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{noAnnounce: false}},
-		{"off", request{message: "off"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{noAnnounce: true}},
-		{"yes", request{message: "yes"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{noAnnounce: false}},
-		{"no", request{message: "no"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{noAnnounce: true}},
+		{"on", request{message: "on"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: false}},
+		{"off", request{message: "off"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: true}},
+		{"yes", request{message: "yes"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: false}},
+		{"no", request{message: "no"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: true}},
 		{"invalid setting", request{message: "asdf"}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, config{}, config{}},
 		{"empty", request{message: ""}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, config{}, config{}},
 	}
@@ -156,8 +156,8 @@ func TestSetAnnounce(t *testing.T) {
 
 			var actual config
 			db.Where(&config{}).First(&actual)
-			if actual.noAnnounce != tt.after.noAnnounce {
-				t.Errorf("expected NoAnnounce=%v got %v", tt.after.noAnnounce, actual.noAnnounce)
+			if actual.NoAnnounce != tt.after.NoAnnounce {
+				t.Errorf("expected NoAnnounce=%v got %v", tt.after.NoAnnounce, actual.NoAnnounce)
 			}
 		})
 	}
@@ -471,17 +471,17 @@ type responseSink struct {
 	responses []testResponse
 }
 
-func (r *responseSink) SendMessageToChannel(msg string) error {
+func (r *responseSink) sendMessageToChannel(msg string) error {
 	r.sink(responseChannelMessage, msg)
 	return nil
 }
 
-func (r *responseSink) SendReply(msg string) error {
+func (r *responseSink) sendReply(msg string) error {
 	r.sink(responseReply, msg)
 	return nil
 }
 
-func (r *responseSink) React(emoji string) error {
+func (r *responseSink) react(emoji string) error {
 	r.sink(responseEmoji, emoji)
 	return nil
 }

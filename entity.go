@@ -6,6 +6,6 @@ import "github.com/jinzhu/gorm"
 type entity struct {
 	gorm.Model
 	Name    string
-	guildID string
+	GuildID string
 	Karma   int
 }

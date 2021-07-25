@@ -10,5 +10,5 @@ import "github.com/jinzhu/gorm"
 type config struct {
 	gorm.Model
 	guildID    string
-	noAnnounce bool
+	NoAnnounce bool
 }
