@@ -1,5 +1,6 @@
 /.popplerc
 /popple
+/test-fixtures
 
 #goland
 .idea
