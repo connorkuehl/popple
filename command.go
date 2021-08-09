@@ -13,6 +13,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/bwmarrin/discordgo"
@@ -253,6 +254,15 @@ func bot(req request, rsp responseWriter, db *gorm.DB) {
 // of karma accumulated.
 func top(req request, rsp responseWriter, db *gorm.DB) {
 	board(req, rsp, db, "desc")
+}
+
+// uptime creates a formatted string informing a user of the time since
+// the last crash
+func Uptime(req request, rsp responseWriter, start time.Time) {
+	uptime := time.Since(start)
+	if err := rsp.sendReply(fmt.Sprintf("It has been %s since my last crash.", uptime)); err != nil {
+		log.Printf("Error when sending reply: %v", err)
+	}
 }
 
 func board(req request, rsp responseWriter, db *gorm.DB, sort string) {

@@ -34,6 +34,7 @@ const DefaultWorkers uint = 4
 const DefaultJobs uint = 128
 
 func main() {
+	start := time.Now()
 	tokenFile := flag.String("token", "", "path to file containing bot token")
 	numWorkers := flag.Uint("workers", DefaultWorkers, "Number of worker threads to spawn")
 	dbFile := flag.String("db", Database, "Path to database file")
@@ -102,6 +103,9 @@ func main() {
 	})
 	router.addRoute("top", func(req request, rsp responseWriter) {
 		top(req, rsp, db)
+	})
+	router.addRoute("uptime", func(req request, rsp responseWriter) {
+		Uptime(req, rsp, start)
 	})
 	router.addRoute("version", func(req request, rsp responseWriter) {
 		sendVersion(req, rsp)
