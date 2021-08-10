@@ -7,10 +7,19 @@ A karma bot for Discord.
 Clone or otherwise download the Popple source code and run:
 
 ```console
+$ go get ./...
 $ go build
 ```
 
 The `go` toolchain should download the dependencies and build Popple.
+
+## Installing or Deploying
+
+See [MANUAL.md](./MANUAL.md) for a task-based knowledge base.
+
+Popple has some additional configuration options. Run `./popple -help`
+for more info. These are optional, but could be helpful for adapting Popple
+to better suit your needs.
 
 ## Running
 
@@ -27,10 +36,6 @@ Then, once that one-time setup is complete:
 ```console
 $ ./popple -token /path/to/popple_token
 ```
-
-Popple has some additional configuration options. Run `./popple -help`
-for more info. These are optional, but could be helpful for adapting Popple
-to better suit your needs.
 
 ## Usage
 
@@ -117,46 +122,3 @@ Person) Person++
 
 It can be turned back on with `@Popple announce yes` or
 `@Popple announce on`.
-
-## Installing
-
-```console
-$ go install github.com/connorkuehl/popple@latest
-```
-
-`latest` can be replaced with a specific commit SHA or release tag if preferred.
-
-## Deploying
-
-Example systemd unit:
-
-```
-/etc/systemd/system/popple.service
-```
-
-```systemd
-[Unit]
-Description=Popple, a karma bot for Discord
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=popple
-Group=popple
-ExecStart=/srv/popple/go/bin/popple -token /srv/popple/.popple_token -db /srv/popple/db.sqlite
-ProtectSystem=yes
-ProtectHome=yes
-NoNewPrivileges=yes
-PrivateTmp=yes
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```console
-$ systemctl enable popple
-$ systemctl start popple
-```
