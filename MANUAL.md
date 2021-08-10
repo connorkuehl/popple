@@ -3,9 +3,8 @@
 Clone or otherwise download the Popple source code, then:
 
 ```console
-$ go get ./...
-$ go build
-$ go test -v
+$ make
+$ make test
 $ go install .
 ```
 
