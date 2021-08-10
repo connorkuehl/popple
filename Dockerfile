@@ -3,7 +3,7 @@ RUN apk add build-base      # for gcc
 RUN mkdir /popple
 ADD . /popple
 WORKDIR /popple
-RUN go build .
+RUN make build
 
 FROM alpine:latest
 WORKDIR /root/

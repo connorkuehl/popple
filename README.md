@@ -7,8 +7,7 @@ A karma bot for Discord.
 Clone or otherwise download the Popple source code and run:
 
 ```console
-$ go get ./...
-$ go build
+$ make
 ```
 
 The `go` toolchain should download the dependencies and build Popple.

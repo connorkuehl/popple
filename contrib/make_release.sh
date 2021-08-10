@@ -1,22 +1,20 @@
-#!/usr/bin/env sh -eu
+#!/usr/bin/env sh
+
+set -exu
 
 # usage: run this from the root of the repo
 #   ./contrib/make_release.sh 2.1.0+dev 2.2.0
 
-VERSION_FILE=version.go
-NEW_VERSION_FILE=${VERSION_FILE}.new
-OLD_TAG=$(echo "${1}" | sed "s/^/v/" | sed "s/+dev//")
-NEW_TAG="v${2}"
+FROM="${1}"
+TO="${2}"
+LAST_TAG="$(git describe --tags --abbrev=0)"
 
-sed "s/const Version = \"${1}\"/const Version = \"${2}\"/" ${VERSION_FILE} > ${NEW_VERSION_FILE}
-mv ${NEW_VERSION_FILE} ${VERSION_FILE}
-git add ${VERSION_FILE}
-git commit -m "Release ${2}" -m "$(git shortlog ${OLD_TAG}..)"
-git tag "${NEW_TAG}"
+sed -i "s/VERSION := ${FROM}/VERSION := ${TO}/" Makefile
+git add Makefile
+git commit -m "Release ${TO}" -m "$(git shortlog "${LAST_TAG}"..)"
+git tag "${TO}"
 
-sed "s/const Version = \"${2}\"/const Version = \"${2}+dev\"/" ${VERSION_FILE} > ${NEW_VERSION_FILE}
-mv ${NEW_VERSION_FILE} ${VERSION_FILE}
-git add ${VERSION_FILE}
+sed -i "s/VERSION := ${TO}/VERSION := ${TO}+dev/" Makefile
+git add Makefile
 git commit -m "Start new development cycle"
-echo "Now run"
-echo "git push origin HEAD:refs/heads/master ${NEW_TAG}"
+echo "Now run: git push origin HEAD:refs/heads/master ${TO}"
