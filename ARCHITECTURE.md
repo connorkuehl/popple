@@ -1,66 +1,50 @@
-The Popple bot's basic organizational structure is that of an event-driven
-application.
-
-## TL;DR
 
 ```txt
+startup:
+--------
+
 func main()
+    -> Open sqlite 3 database (this is the persistence layer)
+    -> Establish Discord session
+    -> Configure command router, so that depending on a message's prefix, it is
+       routed to the corresponding command in command.go.
     -> session.AddHandler(callback)
+         (This callback will enqueue a closure onto a work queue for processing
+         later. The idea is to keep the session.AddHandler callback as short as
+         possible.)
+
+normal operation:
+-----------------
 
     discordgo.Session
         -> callback()
-            -> Place job on work queue
+            -> Place job on work queue, to be picked up by func worker
+               ("jobs" are just closures that capture the necessary
+               state for a given function in command.go; see the calls
+               to router.addRoute for more info)
 
     func worker()
-        -> receives job from work queue
-            -> func doWork(job)
-                -> call functions in command.go
-```
+        -> Receive job from work queue
+            -> Call closure
+               (Closure contains the router's state that will lead it to the
+                correct business logic in command.go.)
+               -> {checkKarma, modKarma, top, bot, uptime, version, help, etc...}()
 
-## Details
+shutdown:
+---------
 
-During startup, Popple's main thread will use the `discordgo` API to
-start a Discord session and register a callback function for whenever
-the bot receives a message from any channel that it is in.
+func main()
+    -> Receive signal
+        -> Detach handler from Discord session to avoid new work during
+           shutdown.
+        -> Send cancel message down cancel channel to workers.
+        -> Wait for acknowledgement from workers or continue to
+           shut down without them after a deadline expires.
+        -> Exit.
 
-```txt
-func main
-    -> session.AddHandler
-```
-
-The closure passed in to `session.AddHandler` encapsulates the incoming Message
-and Discord session objects in a `Job` struct and places it on a work queue
-where a worker goroutine (`func worker`) will remove it from the work queue
-and perform the actual work.
-
-This structure resembles a "top-half" and "bottom-half" style of processing.
-
-The "top-half" is when the `discordgo` library calls the callback.
-In order to keep the top-half's execution time short, the relevant data is
-simply placed on a work queue for later processing and then the top-half
-is done and can go back to waiting for more input from Discord.
-
-The "bottom-half" is the other side of this coin. In `job.go`, `func worker`
-is the entrypoint for the goroutines that were spun up when Popple was first
-starting up.
-
-The worker goroutines will idle in `func worker`. They are waiting for jobs
-from the top-half.
-
-```txt
 func worker()
-    -> func doWork()
+    -> Finish current work
+    -> Receive cancel message
+        -> Send acknowledgement
+            -> return
 ```
-
-Once the worker has work to do in `func doWork`, it will scan the message
-and compare it to a command dispatch table to determine if the message is
-a sub-command dedicated for the Popple bot or if it is just a regular message
-that the bot must scan for karma events.
-
-Once the command is identified, the relevant business-logic function
-in `command.go` is called.
-
-Generally, `command.go` is the terminating destination for the flow of control
-in Popple. Depending on what bot action is taking place, Popple will perform
-the work here and use the context included with the `Job` struct to interact
-with the Discord API and the persistence layer.
