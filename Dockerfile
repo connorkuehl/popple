@@ -1,5 +1,5 @@
 FROM golang:1.15-alpine AS build
-RUN apk add build-base      # for gcc
+RUN apk add build-base git
 RUN mkdir /popple
 ADD . /popple
 WORKDIR /popple
