@@ -259,7 +259,7 @@ func top(req request, rsp responseWriter, db *gorm.DB) {
 // uptime creates a formatted string informing a user of the time since
 // the last crash
 func uptime(req request, rsp responseWriter, start time.Time) {
-	uptime := time.Since(start)
+	uptime := time.Since(start).Truncate(time.Second)
 	if err := rsp.sendReply(fmt.Sprintf("It has been %s since my last crash.", uptime)); err != nil {
 		log.Printf("Error when sending reply: %v", err)
 	}
