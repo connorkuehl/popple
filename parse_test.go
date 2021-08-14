@@ -23,7 +23,7 @@ func TestParseSubjects(t *testing.T) {
 		{"a karma event can be parsed from non-karma events", "yes-- karma", []subject{{"yes", -1}, {"karma", 0}}},
 		{"plain and parentheses-style subjects can be mixed", "A number++ of (subjects with karma)--", []subject{{"A", 0}, {"number", 1}, {"of", 0}, {"subjects with karma", -1}}},
 		{"incrementing nothing yields nothing", "++a", []subject{{"++a", 0}}},
-		{"a karma event cannot be suffixed with a backtick", "hi++`", []subject{{"hi++`", 0}}},
+		{"a karma event cannot be suffixed with a backtick", "hi++`", []subject{}},
 		{"code fences are ignored during parsing", "```code fence``` test++", []subject{{"test", 1}}},
 		{"a parenthesis subject without a karma event yields nothing", "(nothing) (something)++", []subject{{"nothing", 0}, {"something", 1}}},
 		{"no karma events results in no subjects", "hi goodbye farewell ", []subject{{"hi", 0}, {"goodbye", 0}, {"farewell", 0}}},

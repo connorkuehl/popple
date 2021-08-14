@@ -218,15 +218,17 @@ func lexEntry(l *lexer) stateFn {
 }
 
 func lexText(l *lexer) stateFn {
-	for ch := l.next(); ch != eof; {
+	for {
+		ch := l.next()
 		if unicode.IsSpace(ch) {
 			l.backup()
 			break
-		}
-		if ch == tick {
+		} else if ch == tick {
+			l.backup()
+			return discardTick
+		} else if ch == eof {
 			break
 		}
-		ch = l.next()
 	}
 
 	l.emit(itemText)
@@ -235,49 +237,41 @@ func lexText(l *lexer) stateFn {
 }
 
 func discardTick(l *lexer) stateFn {
-	l.next()
+	// caller should have left the initial backtick here, so skip over it
+	ch := l.next()
 	l.ignore()
-	restart := l.first() // make note of where we are
 
-	for ch := l.next(); ch != eof; {
+	// save the next position for backtracking in case there is no matching
+	// backtick
+	restart := l.first()
+
+	for {
+		ch = l.next()
 		if ch == tick {
 			l.ignore()
 			return lexEntry
 		}
-		ch = l.next()
-	}
-
-	// didn't find a matching tick
-	if l.peek() == eof {
-		l.set(restart)
-		if l.peek() == eof {
-			return nil
+		if ch == eof {
+			l.set(restart)
+			break
 		}
-		return lexEntry
 	}
-
-	// discard all the way up to this tick
-	l.ignore()
 
 	return lexEntry
 }
 
 func discardSpace(l *lexer) stateFn {
-	for ch := l.next(); ch != eof; {
+	for {
+		ch := l.next()
+		if ch == eof {
+			return nil
+		}
 		if !unicode.IsSpace(ch) {
 			l.backup()
-			break
+			l.ignore()
+			return lexEntry
 		}
-		ch = l.next()
 	}
-
-	ch := l.peek()
-	if ch == eof {
-		return nil
-	}
-	l.ignore()
-
-	return lexEntry
 }
 
 func lexInParen(l *lexer) stateFn {
