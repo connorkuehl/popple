@@ -121,7 +121,7 @@ func (l *lexer) run() {
 func (l *lexer) emit(t itemType) {
 	if l.pos > l.start {
 		l.items <- item{t, l.input[l.start:l.pos]}
-		l.start = l.pos
+		l.ignore()
 	}
 }
 
