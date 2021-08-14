@@ -209,7 +209,7 @@ func lexEntry(l *lexer) stateFn {
 	case ch == openParen:
 		return lexInParen
 	case ch == tick:
-		return discardTick
+		return nil
 	case unicode.IsSpace(ch):
 		return discardSpace
 	default:
@@ -237,27 +237,8 @@ func lexText(l *lexer) stateFn {
 }
 
 func discardTick(l *lexer) stateFn {
-	// caller should have left the initial backtick here, so skip over it
-	ch := l.next()
 	l.ignore()
-
-	// save the next position for backtracking in case there is no matching
-	// backtick
-	restart := l.first()
-
-	for {
-		ch = l.next()
-		if ch == tick {
-			l.ignore()
-			return lexEntry
-		}
-		if ch == eof {
-			l.set(restart)
-			break
-		}
-	}
-
-	return lexEntry
+	return nil
 }
 
 func discardSpace(l *lexer) stateFn {
