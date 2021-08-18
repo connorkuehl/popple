@@ -40,6 +40,7 @@ func main() {
 	dbFile := flag.String("db", Database, "Path to database file")
 	numJobs := flag.Uint("jobs", DefaultJobs, "Maximum queue size for jobs")
 	timeout := flag.Duration("deadline", 3*time.Second, "How long to wait for workers to exit when shutting down")
+	port := flag.Uint("port", 8080, "Port to listen on for health check HTTP requests")
 	flag.Parse()
 
 	if *tokenFile == "" {
@@ -77,6 +78,8 @@ func main() {
 		log.Fatalf("Error connecting to Discord: %s\n", err)
 	}
 	log.Printf("Popple is online, running version %s\n", Version)
+
+	go healthMonitor(session, *port)
 
 	cancel := make(chan struct{})
 	cancelAck := make(chan uint)
