@@ -12,3 +12,5 @@ require (
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.21.12
 )
+
+replace github.com/bwmarrin/discordgo => github.com/connorkuehl/discordgo v0.23.3-0.20210822184312-e9475c4c43f4
