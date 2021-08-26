@@ -9,7 +9,7 @@ FROM alpine:latest
 WORKDIR /root/
 COPY --from=build /popple/popple .
 
-# docker image run --rm -v path/to/db:/root/popple.sqlite \
+# docker run --rm -v path/to/db:/root/popple.sqlite \
 #                       -v path/to/token:/root/bot.token \
 #                       image_name
 ENTRYPOINT ["/root/popple"]
