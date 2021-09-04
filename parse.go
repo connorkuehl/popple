@@ -33,18 +33,12 @@ func ParseSubjects(s string) []subject {
 	subjects := make([]subject, 0)
 
 	_, items := lex([]rune(s))
-	for {
-		if i, ok := <-items; ok {
-			s := parseSubject(i)
-			if len(s.name) == 0 {
-				continue
-			}
-			subjects = append(subjects, s)
-		} else {
-			break
+	for i := range items {
+		sub := parseSubject(i)
+		if len(sub.name) != 0 {
+			subjects = append(subjects, sub)
 		}
 	}
-
 	return subjects
 }
 
