@@ -30,7 +30,7 @@ type subject struct {
 
 // ParseSubjects parses subjects from text.
 func ParseSubjects(s string) []subject {
-	subjects := make([]subject, 0)
+	subjects := make([]subject, 0, 32)
 
 	_, items := lex([]rune(s))
 	for i := range items {
