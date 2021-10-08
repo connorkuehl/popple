@@ -1,5 +1,5 @@
 VERSION := v2.2.0+dev
-BUILD := $(shell git describe --tags 2>/dev/null || echo "$(VERSION)")
+BUILD := $(shell git describe --tags --dirty 2>/dev/null || echo "$(VERSION)")
 
 LD_FLAGS := "-X 'github.com/connorkuehl/popple.Version=$(BUILD)'"
 
