@@ -25,7 +25,7 @@ type Router struct {
 	catchall route
 }
 
-func (r *Router) AddRoute(name string, work commandFn) {
+func (r *Router) addRoute(name string, work commandFn) {
 	route := route{name, work}
 	if name == "*" {
 		r.catchall = route

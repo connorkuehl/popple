@@ -87,9 +87,6 @@ func main() {
 		log.Fatalf("Failed to read token from %s\n", *tokenFile)
 	}
 
-	_ = db.AutoMigrate(&popple.Config{})
-	_ = db.AutoMigrate(&popple.Entity{})
-
 	session, err := discordgo.New("Bot " + string(token))
 	if err != nil {
 		log.Fatalf("Failed to initialize Discord library: %s\n", err)
@@ -109,35 +106,11 @@ func main() {
 		go worker(i, workQueue, cancel, cancelAck)
 	}
 
-	router := popple.Router{}
-	router.Bot = "@" + session.State.User.Username
-	router.AddRoute("announce", func(req popple.Request, rsp popple.ResponseWriter) {
-		popple.SetAnnounce(req, rsp, db)
-	})
-	router.AddRoute("help", func(req popple.Request, rsp popple.ResponseWriter) {
-		popple.SendHelp(req, rsp)
-	})
-	router.AddRoute("karma", func(req popple.Request, rsp popple.ResponseWriter) {
-		popple.CheckKarma(req, rsp, db)
-	})
-	router.AddRoute("bot", func(req popple.Request, rsp popple.ResponseWriter) {
-		popple.Bot(req, rsp, db)
-	})
-	router.AddRoute("top", func(req popple.Request, rsp popple.ResponseWriter) {
-		popple.Top(req, rsp, db)
-	})
-	router.AddRoute("uptime", func(req popple.Request, rsp popple.ResponseWriter) {
-		popple.Uptime(req, rsp, start)
-	})
-	router.AddRoute("version", func(req popple.Request, rsp popple.ResponseWriter) {
-		popple.SendVersion(req, rsp)
-	})
-
-	// just check for karma operations by default if no other commands
-	// were matched
-	router.AddRoute("*", func(req popple.Request, rsp popple.ResponseWriter) {
-		popple.ModKarma(req, rsp, db)
-	})
+	app, err := popple.NewApp(db, start)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	app.Router.Bot = "@" + session.State.User.Username
 
 	detachMessageCreateHandler := session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		// don't process messages sent by the bot
@@ -151,7 +124,7 @@ func main() {
 		req := popple.Request{IsDM: isDM, GuildID: m.Message.GuildID, Message: msg}
 		rsp := response{s, m.Message}
 		workQueue <- func() {
-			router.Route(req, rsp)
+			app.Router.Route(req, rsp)
 		}
 	})
 
