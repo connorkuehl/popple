@@ -471,17 +471,17 @@ type responseSink struct {
 	responses []testResponse
 }
 
-func (r *responseSink) sendMessageToChannel(msg string) error {
+func (r *responseSink) SendMessageToChannel(msg string) error {
 	r.sink(responseChannelMessage, msg)
 	return nil
 }
 
-func (r *responseSink) sendReply(msg string) error {
+func (r *responseSink) SendReply(msg string) error {
 	r.sink(responseReply, msg)
 	return nil
 }
 
-func (r *responseSink) react(emoji string) error {
+func (r *responseSink) React(emoji string) error {
 	r.sink(responseEmoji, emoji)
 	return nil
 }
