@@ -6,11 +6,13 @@ import (
 	"gorm.io/gorm"
 )
 
+// App is an instance of a Popple bot.
 type App struct {
 	db     *gorm.DB
 	Router *Router
 }
 
+// NewApp creates a new Popple instance.
 func NewApp(db *gorm.DB, start time.Time) (*App, error) {
 	if err := db.AutoMigrate(&Config{}); err != nil {
 		return nil, err

@@ -1,4 +1,6 @@
 package popple
 
-// Indicates Popple version
+// Version is the Popple bot version that is running.
+//
+// vMAJOR.MINOR.PATCH[-gCOMMIT[-dirty]]
 var Version string

@@ -39,7 +39,7 @@ func TestParseSubjects(t *testing.T) {
 	for _, tt := range tests {
 		testName := fmt.Sprintf("%s %s,%v", tt.name, tt.input, tt.want)
 		t.Run(testName, func(t *testing.T) {
-			actual := ParseSubjects(tt.input)
+			actual := parseSubjects(tt.input)
 			if !reflect.DeepEqual(actual, tt.want) {
 				t.Errorf("got %v, want %v", actual, tt.want)
 			}
