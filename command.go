@@ -19,6 +19,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// Router routes an incoming message to the appropriate Popple
+// message handler.
 type Router struct {
 	Bot      string
 	routes   []route
@@ -34,6 +36,8 @@ func (r *Router) addRoute(name string, work commandFn) {
 	}
 }
 
+// Route invokes the appropriate Popple message handler for the
+// Request.
 func (r *Router) Route(req Request, rsp ResponseWriter) {
 	matchers := []struct {
 		prefixer         func(r route) string
@@ -78,12 +82,16 @@ type route struct {
 	cmd   commandFn
 }
 
+// Request represents an incoming message that the Popple bot may
+// want to respond to.
 type Request struct {
 	IsDM    bool
 	GuildID string
 	Message string
 }
 
+// ResponseWriter implementors transmit Popple's responses into
+// the respective chat implementation.
 type ResponseWriter interface {
 	SendMessageToChannel(msg string) error
 	SendReply(msg string) error
@@ -101,7 +109,7 @@ func CheckKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
 
 	var sep string
 
-	subjects := marshalSubjects(ParseSubjects(req.Message))
+	subjects := marshalSubjects(parseSubjects(req.Message))
 
 	reply := strings.Builder{}
 
@@ -185,7 +193,7 @@ func ModKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
 		return
 	}
 
-	modifiers := marshalSubjects(ParseSubjects(req.Message))
+	modifiers := marshalSubjects(parseSubjects(req.Message))
 
 	reply := strings.Builder{}
 

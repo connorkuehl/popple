@@ -28,8 +28,8 @@ type subject struct {
 	karma int
 }
 
-// ParseSubjects parses subjects from text.
-func ParseSubjects(s string) []subject {
+// parseSubjects parses subjects from text.
+func parseSubjects(s string) []subject {
 	subjects := make([]subject, 0, 32)
 
 	_, items := lex([]rune(s))
