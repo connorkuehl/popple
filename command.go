@@ -16,7 +16,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/bwmarrin/discordgo"
 	"gorm.io/gorm"
 )
 
@@ -86,29 +85,9 @@ type Request struct {
 }
 
 type ResponseWriter interface {
-	sendMessageToChannel(msg string) error
-	sendReply(msg string) error
-	react(emoji string) error
-}
-
-type Response struct {
-	S *discordgo.Session
-	M *discordgo.Message
-}
-
-func (r Response) sendMessageToChannel(msg string) error {
-	_, err := r.S.ChannelMessageSend(r.M.ChannelID, msg)
-	return err
-}
-
-func (r Response) sendReply(msg string) error {
-	_, err := r.S.ChannelMessageSendReply(r.M.ChannelID, msg, r.M.MessageReference)
-	return err
-}
-
-func (r Response) react(emojiID string) error {
-	err := r.S.MessageReactionAdd(r.M.ChannelID, r.M.ID, emojiID)
-	return err
+	SendMessageToChannel(msg string) error
+	SendReply(msg string) error
+	React(emoji string) error
 }
 
 type commandFn func(req Request, rsp ResponseWriter)
@@ -138,7 +117,7 @@ func CheckKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
 		return
 	}
 
-	if err := rsp.sendMessageToChannel(reply.String()); err != nil {
+	if err := rsp.SendMessageToChannel(reply.String()); err != nil {
 		log.Printf("Error when sending reply to channel: %s\n", err)
 	}
 }
@@ -162,7 +141,7 @@ func SetAnnounce(req Request, rsp ResponseWriter, db *gorm.DB) {
 	case setting == "off" || setting == "no":
 		on = false
 	default:
-		if err := rsp.sendReply("Announce settings are: \"yes\", \"no\", \"on\", \"off\""); err != nil {
+		if err := rsp.SendReply("Announce settings are: \"yes\", \"no\", \"on\", \"off\""); err != nil {
 			log.Printf("Error when sending reply: %v", err)
 		}
 		return
@@ -173,7 +152,7 @@ func SetAnnounce(req Request, rsp ResponseWriter, db *gorm.DB) {
 	cfg.NoAnnounce = !on
 	db.Save(cfg)
 
-	if err := rsp.react("👍"); err != nil {
+	if err := rsp.React("👍"); err != nil {
 		log.Printf("Error when sending reply: %v", err)
 	}
 }
@@ -182,7 +161,7 @@ func SetAnnounce(req Request, rsp ResponseWriter, db *gorm.DB) {
 func SendHelp(req Request, rsp ResponseWriter) {
 	reply := "Usage: https://github.com/connorkuehl/popple#usage"
 
-	if err := rsp.sendMessageToChannel(reply); err != nil {
+	if err := rsp.SendMessageToChannel(reply); err != nil {
 		log.Printf("Error sending message: %s", err)
 	}
 }
@@ -190,7 +169,7 @@ func SendHelp(req Request, rsp ResponseWriter) {
 // SendVersion allows server inhabitants to see what Popple revision
 // is running.
 func SendVersion(req Request, rsp ResponseWriter) {
-	if err := rsp.sendMessageToChannel(fmt.Sprintf("I'm running version %s.", Version)); err != nil {
+	if err := rsp.SendMessageToChannel(fmt.Sprintf("I'm running version %s.", Version)); err != nil {
 		log.Printf("Error sending version: %s", err)
 	}
 }
@@ -238,7 +217,7 @@ func ModKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
 	db.Where(&Config{GuildID: req.GuildID}).FirstOrCreate(&cfg)
 
 	if !cfg.NoAnnounce {
-		if err := rsp.sendMessageToChannel(reply.String()); err != nil {
+		if err := rsp.SendMessageToChannel(reply.String()); err != nil {
 			log.Printf("Error when sending reply to channel: %s\n", err)
 		}
 	}
@@ -260,7 +239,7 @@ func Top(req Request, rsp ResponseWriter, db *gorm.DB) {
 // the last crash
 func Uptime(req Request, rsp ResponseWriter, start time.Time) {
 	uptime := time.Since(start).Truncate(time.Second)
-	if err := rsp.sendReply(fmt.Sprintf("It has been %s since my last crash.", uptime)); err != nil {
+	if err := rsp.SendReply(fmt.Sprintf("It has been %s since my last crash.", uptime)); err != nil {
 		log.Printf("Error when sending reply: %v", err)
 	}
 }
@@ -298,7 +277,7 @@ func board(req Request, rsp ResponseWriter, db *gorm.DB, sort string) {
 		return
 	}
 
-	if err := rsp.sendMessageToChannel(board.String()); err != nil {
+	if err := rsp.SendMessageToChannel(board.String()); err != nil {
 		log.Printf("Error sending message to channel: %s\n", err)
 	}
 }

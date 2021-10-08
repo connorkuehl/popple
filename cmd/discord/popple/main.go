@@ -35,6 +35,26 @@ const DefaultWorkers uint = 4
 // Popple must process to determine how it will act (or not act).
 const DefaultJobs uint = 128
 
+type response struct {
+	s *discordgo.Session
+	m *discordgo.Message
+}
+
+func (r response) SendMessageToChannel(msg string) error {
+	_, err := r.s.ChannelMessageSend(r.m.ChannelID, msg)
+	return err
+}
+
+func (r response) SendReply(msg string) error {
+	_, err := r.s.ChannelMessageSendReply(r.m.ChannelID, msg, r.m.MessageReference)
+	return err
+}
+
+func (r response) React(emojiID string) error {
+	err := r.s.MessageReactionAdd(r.m.ChannelID, r.m.ID, emojiID)
+	return err
+}
+
 func main() {
 	start := time.Now()
 	tokenFile := flag.String("token", "", "path to file containing bot token")
@@ -129,7 +149,7 @@ func main() {
 		msg := strings.TrimSpace(m.ContentWithMentionsReplaced())
 
 		req := popple.Request{IsDM: isDM, GuildID: m.Message.GuildID, Message: msg}
-		rsp := popple.Response{s, m.Message}
+		rsp := response{s, m.Message}
 		workQueue <- func() {
 			router.Route(req, rsp)
 		}
