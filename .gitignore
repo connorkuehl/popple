@@ -1,6 +1,8 @@
 /.popplerc
 /test-fixtures
 /cmd/discord/popple/popple
+bot.token
+popple.sqlite
 
 #goland
 .idea
