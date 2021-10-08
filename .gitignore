@@ -1,6 +1,6 @@
 /.popplerc
-/popple
 /test-fixtures
+/cmd/discord/popple/popple
 
 #goland
 .idea

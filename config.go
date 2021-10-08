@@ -1,14 +1,14 @@
-package main
+package popple
 
 import "github.com/jinzhu/gorm"
 
-// config represents a server-associated Popple config.
+// Config represents a server-associated Popple Config.
 //
 // For example, if someone in Server A tells Popple to stop
 // announcing karma events, then it won't affect Popple's
 // announce state in Server B.
-type config struct {
+type Config struct {
 	gorm.Model
-	guildID    string
+	GuildID    string
 	NoAnnounce bool
 }
