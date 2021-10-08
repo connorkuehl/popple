@@ -1,4 +1,4 @@
-package main
+package popple
 
 // Module command contains all of the business logic associated
 // with the Popple bot and its behaviors.
@@ -20,13 +20,13 @@ import (
 	"gorm.io/gorm"
 )
 
-type router struct {
-	bot      string
+type Router struct {
+	Bot      string
 	routes   []route
 	catchall route
 }
 
-func (r *router) addRoute(name string, work commandFn) {
+func (r *Router) AddRoute(name string, work commandFn) {
 	route := route{name, work}
 	if name == "*" {
 		r.catchall = route
@@ -35,13 +35,13 @@ func (r *router) addRoute(name string, work commandFn) {
 	}
 }
 
-func (r *router) route(req request, rsp responseWriter) {
+func (r *Router) Route(req Request, rsp ResponseWriter) {
 	matchers := []struct {
 		prefixer         func(r route) string
 		preconditionsMet func(r route) bool
 	}{
-		{prefixer: func(rt route) string { return fmt.Sprintf("%s %s", r.bot, rt.match) }, preconditionsMet: func(rt route) bool { return true }},
-		{prefixer: func(rt route) string { return rt.match }, preconditionsMet: func(rt route) bool { return req.isDM }},
+		{prefixer: func(rt route) string { return fmt.Sprintf("%s %s", r.Bot, rt.match) }, preconditionsMet: func(rt route) bool { return true }},
+		{prefixer: func(rt route) string { return rt.match }, preconditionsMet: func(rt route) bool { return req.IsDM }},
 	}
 
 	for _, route := range r.routes {
@@ -56,12 +56,12 @@ func (r *router) route(req request, rsp responseWriter) {
 			// previously, only the prefix was checked, meaning "@Popple helpasdf"
 			// would route to "@Popple help" and "asdf" was passed on as the message
 			// body/arguments
-			if message := strings.TrimPrefix(req.message, prefix); message != req.message && matcher.preconditionsMet(route) {
+			if message := strings.TrimPrefix(req.Message, prefix); message != req.Message && matcher.preconditionsMet(route) {
 				// ensure the message is an entire command ("@Popple help") or ensure
 				// that the command prefix is separated from the rest of the message/
 				// arguments by whitespace ("@Popple announce on")
 				if trimmed := strings.TrimLeftFunc(message, unicode.IsSpace); len(message) == 0 || trimmed != message {
-					req.message = trimmed
+					req.Message = trimmed
 					route.cmd(req, rsp)
 					return
 				}
@@ -79,56 +79,56 @@ type route struct {
 	cmd   commandFn
 }
 
-type request struct {
-	isDM    bool
-	guildID string
-	message string
+type Request struct {
+	IsDM    bool
+	GuildID string
+	Message string
 }
 
-type responseWriter interface {
+type ResponseWriter interface {
 	sendMessageToChannel(msg string) error
 	sendReply(msg string) error
 	react(emoji string) error
 }
 
-type response struct {
-	s *discordgo.Session
-	m *discordgo.Message
+type Response struct {
+	S *discordgo.Session
+	M *discordgo.Message
 }
 
-func (r response) sendMessageToChannel(msg string) error {
-	_, err := r.s.ChannelMessageSend(r.m.ChannelID, msg)
+func (r Response) sendMessageToChannel(msg string) error {
+	_, err := r.S.ChannelMessageSend(r.M.ChannelID, msg)
 	return err
 }
 
-func (r response) sendReply(msg string) error {
-	_, err := r.s.ChannelMessageSendReply(r.m.ChannelID, msg, r.m.MessageReference)
+func (r Response) sendReply(msg string) error {
+	_, err := r.S.ChannelMessageSendReply(r.M.ChannelID, msg, r.M.MessageReference)
 	return err
 }
 
-func (r response) react(emojiID string) error {
-	err := r.s.MessageReactionAdd(r.m.ChannelID, r.m.ID, emojiID)
+func (r Response) react(emojiID string) error {
+	err := r.S.MessageReactionAdd(r.M.ChannelID, r.M.ID, emojiID)
 	return err
 }
 
-type commandFn func(req request, rsp responseWriter)
+type commandFn func(req Request, rsp ResponseWriter)
 
-// checkKarma allows server inhabitants to query karma levels
+// CheckKarma allows server inhabitants to query karma levels
 // for subjects they have incremented or decremented over time.
-func checkKarma(req request, rsp responseWriter, db *gorm.DB) {
-	if req.isDM {
+func CheckKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
+	if req.IsDM {
 		return
 	}
 
 	var sep string
 
-	subjects := marshalSubjects(ParseSubjects(req.message))
+	subjects := marshalSubjects(ParseSubjects(req.Message))
 
 	reply := strings.Builder{}
 
 	for subject := range subjects {
-		var entty entity
-		db.Where(&entity{GuildID: req.guildID, Name: subject}).First(&entty)
+		var entty Entity
+		db.Where(&Entity{GuildID: req.GuildID, Name: subject}).First(&entty)
 		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, subject, entty.Karma))
 		sep = " "
 	}
@@ -143,14 +143,14 @@ func checkKarma(req request, rsp responseWriter, db *gorm.DB) {
 	}
 }
 
-// setAnnounce allows server inhabitants to enable or disable Popple
+// SetAnnounce allows server inhabitants to enable or disable Popple
 // announcements when karma is modified from a message.
-func setAnnounce(req request, rsp responseWriter, db *gorm.DB) {
-	if req.isDM {
+func SetAnnounce(req Request, rsp ResponseWriter, db *gorm.DB) {
+	if req.IsDM {
 		return
 	}
 
-	scanner := bufio.NewScanner(strings.NewReader(req.message))
+	scanner := bufio.NewScanner(strings.NewReader(req.Message))
 	scanner.Split(bufio.ScanWords)
 	_ = scanner.Scan()
 	setting := scanner.Text()
@@ -168,8 +168,8 @@ func setAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 		return
 	}
 
-	var cfg config
-	db.Where(&config{guildID: req.guildID}).FirstOrCreate(&cfg)
+	var cfg Config
+	db.Where(&Config{GuildID: req.GuildID}).FirstOrCreate(&cfg)
 	cfg.NoAnnounce = !on
 	db.Save(cfg)
 
@@ -178,8 +178,8 @@ func setAnnounce(req request, rsp responseWriter, db *gorm.DB) {
 	}
 }
 
-// sendHelp allows server inhabitants to request usage information.
-func sendHelp(req request, rsp responseWriter) {
+// SendHelp allows server inhabitants to request usage information.
+func SendHelp(req Request, rsp ResponseWriter) {
 	reply := "Usage: https://github.com/connorkuehl/popple#usage"
 
 	if err := rsp.sendMessageToChannel(reply); err != nil {
@@ -187,26 +187,26 @@ func sendHelp(req request, rsp responseWriter) {
 	}
 }
 
-// sendVersion allows server inhabitants to see what Popple revision
+// SendVersion allows server inhabitants to see what Popple revision
 // is running.
-func sendVersion(req request, rsp responseWriter) {
+func SendVersion(req Request, rsp ResponseWriter) {
 	if err := rsp.sendMessageToChannel(fmt.Sprintf("I'm running version %s.", Version)); err != nil {
 		log.Printf("Error sending version: %s", err)
 	}
 }
 
-// modKarma is the default Popple action that will be taken when no other
+// ModKarma is the default Popple action that will be taken when no other
 // subcommand is identified in the message.
 //
 // Popple will scan the entire message, parse out any karma subjects,
 // count up the karma, and reply with the karma modifications that the
 // message has made resulted in.
-func modKarma(req request, rsp responseWriter, db *gorm.DB) {
-	if req.isDM {
+func ModKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
+	if req.IsDM {
 		return
 	}
 
-	modifiers := marshalSubjects(ParseSubjects(req.message))
+	modifiers := marshalSubjects(ParseSubjects(req.Message))
 
 	reply := strings.Builder{}
 
@@ -216,9 +216,9 @@ func modKarma(req request, rsp responseWriter, db *gorm.DB) {
 			continue
 		}
 
-		var entty entity
+		var entty Entity
 
-		db.Where(&entity{GuildID: req.guildID, Name: subject}).FirstOrCreate(&entty)
+		db.Where(&Entity{GuildID: req.GuildID, Name: subject}).FirstOrCreate(&entty)
 		entty.Karma += netKarma
 
 		reply.WriteString(fmt.Sprintf("%s%s.", sep, formatKarmaStatement(entty.Name, entty.Karma)))
@@ -234,8 +234,8 @@ func modKarma(req request, rsp responseWriter, db *gorm.DB) {
 		return
 	}
 
-	var cfg config
-	db.Where(&config{guildID: req.guildID}).FirstOrCreate(&cfg)
+	var cfg Config
+	db.Where(&Config{GuildID: req.GuildID}).FirstOrCreate(&cfg)
 
 	if !cfg.NoAnnounce {
 		if err := rsp.sendMessageToChannel(reply.String()); err != nil {
@@ -244,35 +244,35 @@ func modKarma(req request, rsp responseWriter, db *gorm.DB) {
 	}
 }
 
-// bot allows server inhabitants to see who is "in the lead" for
+// Bot allows server inhabitants to see who is "in the lead" for
 // the LEAST amount of karma.
-func bot(req request, rsp responseWriter, db *gorm.DB) {
+func Bot(req Request, rsp ResponseWriter, db *gorm.DB) {
 	board(req, rsp, db, "asc")
 }
 
-// top allows server inhabitants to see who is in the lead in terms
+// Top allows server inhabitants to see who is in the lead in terms
 // of karma accumulated.
-func top(req request, rsp responseWriter, db *gorm.DB) {
+func Top(req Request, rsp ResponseWriter, db *gorm.DB) {
 	board(req, rsp, db, "desc")
 }
 
-// uptime creates a formatted string informing a user of the time since
+// Uptime creates a formatted string informing a user of the time since
 // the last crash
-func uptime(req request, rsp responseWriter, start time.Time) {
+func Uptime(req Request, rsp ResponseWriter, start time.Time) {
 	uptime := time.Since(start).Truncate(time.Second)
 	if err := rsp.sendReply(fmt.Sprintf("It has been %s since my last crash.", uptime)); err != nil {
 		log.Printf("Error when sending reply: %v", err)
 	}
 }
 
-func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
-	if req.isDM {
+func board(req Request, rsp ResponseWriter, db *gorm.DB, sort string) {
+	if req.IsDM {
 		return
 	}
 
 	limit := 10
 
-	message := req.message
+	message := req.Message
 	parts := strings.Fields(message)
 	if len(parts) > 0 {
 		limitArg, err := strconv.Atoi(parts[0])
@@ -285,8 +285,8 @@ func board(req request, rsp responseWriter, db *gorm.DB, sort string) {
 		return
 	}
 
-	var entities []entity
-	db.Where(&entity{GuildID: req.guildID}).Order(fmt.Sprintf("karma %s", sort)).Limit(limit).Find(&entities)
+	var entities []Entity
+	db.Where(&Entity{GuildID: req.GuildID}).Order(fmt.Sprintf("karma %s", sort)).Limit(limit).Find(&entities)
 
 	board := strings.Builder{}
 	for _, entity := range entities {

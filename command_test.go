@@ -1,4 +1,4 @@
-package main
+package popple
 
 import (
 	"fmt"
@@ -18,16 +18,16 @@ const fixturesDir string = "test-fixtures"
 func TestCheckKarma(t *testing.T) {
 	interactiveCases := []struct {
 		name    string
-		input   request
+		input   Request
 		needles []string
 	}{
-		{"subject with pre-existing karma", request{message: "Popple"}, []string{testFormatKarmaStatement("Popple", 1)}},
-		{"subject without karma", request{message: "Nobody"}, []string{testFormatKarmaStatement("Nobody", 0)}},
-		{"multiple subjects", request{message: "Popple Nobody Gophers"}, []string{testFormatKarmaStatement("Nobody", 0), testFormatKarmaStatement("Popple", 1), testFormatKarmaStatement("Gophers", 12)}},
+		{"subject with pre-existing karma", Request{Message: "Popple"}, []string{testFormatKarmaStatement("Popple", 1)}},
+		{"subject without karma", Request{Message: "Nobody"}, []string{testFormatKarmaStatement("Nobody", 0)}},
+		{"multiple subjects", Request{Message: "Popple Nobody Gophers"}, []string{testFormatKarmaStatement("Nobody", 0), testFormatKarmaStatement("Popple", 1), testFormatKarmaStatement("Gophers", 12)}},
 	}
 
 	db, cleanup := makeScratchDB(t)
-	populateEntitiesInDB(db, []entity{
+	populateEntitiesInDB(db, []Entity{
 		{Name: "Popple", Karma: 1},
 		{Name: "Gophers", Karma: 12},
 	})
@@ -36,7 +36,7 @@ func TestCheckKarma(t *testing.T) {
 	for _, tt := range interactiveCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			checkKarma(tt.input, &rsp, db)
+			CheckKarma(tt.input, &rsp, db)
 			assertNumResponses(t, rsp, 1)
 			assertHasAllSubstrings(t, rsp.responses[0].value, tt.needles)
 		})
@@ -44,16 +44,16 @@ func TestCheckKarma(t *testing.T) {
 
 	ignoreCases := []struct {
 		name  string
-		input request
+		input Request
 	}{
-		{"empty", request{message: ""}},
-		{"in direct message context", request{message: "Popple", isDM: true}},
+		{"empty", Request{Message: ""}},
+		{"in direct message context", Request{Message: "Popple", IsDM: true}},
 	}
 
 	for _, tt := range ignoreCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			checkKarma(tt.input, &rsp, db)
+			CheckKarma(tt.input, &rsp, db)
 			assertNumResponses(t, rsp, 0)
 		})
 	}
@@ -62,14 +62,14 @@ func TestCheckKarma(t *testing.T) {
 func TestModKarma(t *testing.T) {
 	interactiveCases := []struct {
 		name    string
-		input   request
+		input   Request
 		needles []string
 	}{
-		{"basic increment", request{message: "Test++"}, []string{testFormatKarmaStatement("Test", 1)}},
-		{"basic decrement", request{message: "Test--"}, []string{testFormatKarmaStatement("Test", -1)}},
-		{"many operations", request{message: "NoKarma SomeKarma++ LessKarma-- NoMoreKarma"}, []string{testFormatKarmaStatement("SomeKarma", 1), testFormatKarmaStatement("LessKarma", -1)}},
-		{"a paren subject can have a leading @", request{message: "(@holdo)++"}, []string{testFormatKarmaStatement("@holdo", 1)}},
-		{"a plaintext subject has @ prefix stripped", request{message: "@holdo++"}, []string{testFormatKarmaStatement("holdo", 1)}},
+		{"basic increment", Request{Message: "Test++"}, []string{testFormatKarmaStatement("Test", 1)}},
+		{"basic decrement", Request{Message: "Test--"}, []string{testFormatKarmaStatement("Test", -1)}},
+		{"many operations", Request{Message: "NoKarma SomeKarma++ LessKarma-- NoMoreKarma"}, []string{testFormatKarmaStatement("SomeKarma", 1), testFormatKarmaStatement("LessKarma", -1)}},
+		{"a paren subject can have a leading @", Request{Message: "(@holdo)++"}, []string{testFormatKarmaStatement("@holdo", 1)}},
+		{"a plaintext subject has @ prefix stripped", Request{Message: "@holdo++"}, []string{testFormatKarmaStatement("holdo", 1)}},
 	}
 
 	for _, tt := range interactiveCases {
@@ -78,7 +78,7 @@ func TestModKarma(t *testing.T) {
 			defer cleanup()
 
 			var rsp responseSink
-			modKarma(tt.input, &rsp, db)
+			ModKarma(tt.input, &rsp, db)
 			assertNumResponses(t, rsp, 1)
 			assertHasAllSubstrings(t, rsp.responses[0].value, tt.needles)
 		})
@@ -86,29 +86,29 @@ func TestModKarma(t *testing.T) {
 
 	ignoreCases := []struct {
 		name  string
-		input request
+		input Request
 	}{
-		{"ignore in direct message context", request{isDM: true, message: "Test++"}},
-		{"ignore net zero operations", request{message: "Test++ Test--"}},
+		{"ignore in direct message context", Request{IsDM: true, Message: "Test++"}},
+		{"ignore net zero operations", Request{Message: "Test++ Test--"}},
 	}
 
 	for _, tt := range ignoreCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			modKarma(tt.input, &rsp, nil)
+			ModKarma(tt.input, &rsp, nil)
 			assertNumResponses(t, rsp, 0)
 		})
 	}
 
 	dataCases := []struct {
 		name   string
-		input  request
-		before []entity
-		after  []entity
+		input  Request
+		before []Entity
+		after  []Entity
 	}{
-		{"reducing to zero removes row", request{message: "Test--"}, []entity{{Name: "Test", Karma: 1}}, []entity{}},
-		{"adjusting karma is saved to existing row", request{message: "Test++"}, []entity{{Name: "Test", Karma: 1}}, []entity{{Name: "Test", Karma: 2}}},
-		{"the first increment adds a new row", request{message: "Test++"}, []entity{}, []entity{{Name: "Test", Karma: 1}}},
+		{"reducing to zero removes row", Request{Message: "Test--"}, []Entity{{Name: "Test", Karma: 1}}, []Entity{}},
+		{"adjusting karma is saved to existing row", Request{Message: "Test++"}, []Entity{{Name: "Test", Karma: 1}}, []Entity{{Name: "Test", Karma: 2}}},
+		{"the first increment adds a new row", Request{Message: "Test++"}, []Entity{}, []Entity{{Name: "Test", Karma: 1}}},
 	}
 
 	for _, tt := range dataCases {
@@ -118,9 +118,9 @@ func TestModKarma(t *testing.T) {
 			populateEntitiesInDB(db, tt.before)
 
 			var rsp responseSink
-			modKarma(tt.input, &rsp, db)
+			ModKarma(tt.input, &rsp, db)
 
-			var actual []entity
+			var actual []Entity
 			db.Find(&actual)
 
 			assertDataChanged(t, actual, tt.after)
@@ -131,31 +131,31 @@ func TestModKarma(t *testing.T) {
 func TestSetAnnounce(t *testing.T) {
 	interactiveCases := []struct {
 		name              string
-		input             request
+		input             Request
 		expectedResponses []testResponse
-		before, after     config
+		before, after     Config
 	}{
-		{"on", request{message: "on"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: false}},
-		{"off", request{message: "off"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: true}},
-		{"yes", request{message: "yes"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: false}},
-		{"no", request{message: "no"}, []testResponse{{kind: responseEmoji, value: "👍"}}, config{}, config{NoAnnounce: true}},
-		{"invalid setting", request{message: "asdf"}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, config{}, config{}},
-		{"empty", request{message: ""}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, config{}, config{}},
+		{"on", Request{Message: "on"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: false}},
+		{"off", Request{Message: "off"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: true}},
+		{"yes", Request{Message: "yes"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: false}},
+		{"no", Request{Message: "no"}, []testResponse{{kind: responseEmoji, value: "👍"}}, Config{}, Config{NoAnnounce: true}},
+		{"invalid setting", Request{Message: "asdf"}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, Config{}, Config{}},
+		{"empty", Request{Message: ""}, []testResponse{{kind: responseReply, value: "Announce settings are: \"yes\", \"no\", \"on\", \"off\""}}, Config{}, Config{}},
 	}
 
 	for _, tt := range interactiveCases {
 		t.Run(tt.name, func(t *testing.T) {
 			db, cleanup := makeScratchDB(t)
 			defer cleanup()
-			populateConfigsInDB(db, []config{tt.before})
+			populateConfigsInDB(db, []Config{tt.before})
 
 			var rsp responseSink
-			setAnnounce(tt.input, &rsp, db)
+			SetAnnounce(tt.input, &rsp, db)
 
 			reflect.DeepEqual(tt.expectedResponses, rsp.responses)
 
-			var actual config
-			db.Where(&config{}).First(&actual)
+			var actual Config
+			db.Where(&Config{}).First(&actual)
 			if actual.NoAnnounce != tt.after.NoAnnounce {
 				t.Errorf("expected NoAnnounce=%v got %v", tt.after.NoAnnounce, actual.NoAnnounce)
 			}
@@ -164,15 +164,15 @@ func TestSetAnnounce(t *testing.T) {
 
 	ignoreCases := []struct {
 		name  string
-		input request
+		input Request
 	}{
-		{"ignored in DM context", request{isDM: true, message: "on"}},
+		{"ignored in DM context", Request{IsDM: true, Message: "on"}},
 	}
 
 	for _, tt := range ignoreCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			setAnnounce(tt.input, &rsp, nil)
+			SetAnnounce(tt.input, &rsp, nil)
 			assertNumResponses(t, rsp, 0)
 		})
 	}
@@ -181,17 +181,17 @@ func TestSetAnnounce(t *testing.T) {
 func TestSendHelp(t *testing.T) {
 	cases := []struct {
 		name              string
-		input             request
+		input             Request
 		expectedResponses []testResponse
 	}{
-		{"help sends link to usage", request{}, []testResponse{{kind: responseChannelMessage, value: "Usage: https://github.com/connorkuehl/popple#usage"}}},
-		{"help sends link to usage in DM context", request{isDM: true}, []testResponse{{kind: responseChannelMessage, value: "Usage: https://github.com/connorkuehl/popple#usage"}}},
+		{"help sends link to usage", Request{}, []testResponse{{kind: responseChannelMessage, value: "Usage: https://github.com/connorkuehl/popple#usage"}}},
+		{"help sends link to usage in DM context", Request{IsDM: true}, []testResponse{{kind: responseChannelMessage, value: "Usage: https://github.com/connorkuehl/popple#usage"}}},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			sendHelp(tt.input, &rsp)
+			SendHelp(tt.input, &rsp)
 			if !reflect.DeepEqual(rsp.responses, tt.expectedResponses) {
 				t.Errorf("expected %#v got %#v", tt.expectedResponses, rsp.responses)
 			}
@@ -202,17 +202,17 @@ func TestSendHelp(t *testing.T) {
 func TestSendVersion(t *testing.T) {
 	cases := []struct {
 		name              string
-		input             request
+		input             Request
 		expectedResponses []testResponse
 	}{
-		{"version sends version", request{}, []testResponse{{kind: responseChannelMessage, value: fmt.Sprintf("I'm running version %s.", Version)}}},
-		{"version sends version in DM context", request{isDM: true}, []testResponse{{kind: responseChannelMessage, value: fmt.Sprintf("I'm running version %s.", Version)}}},
+		{"version sends version", Request{}, []testResponse{{kind: responseChannelMessage, value: fmt.Sprintf("I'm running version %s.", Version)}}},
+		{"version sends version in DM context", Request{IsDM: true}, []testResponse{{kind: responseChannelMessage, value: fmt.Sprintf("I'm running version %s.", Version)}}},
 	}
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			sendVersion(tt.input, &rsp)
+			SendVersion(tt.input, &rsp)
 
 			if !reflect.DeepEqual(rsp.responses, tt.expectedResponses) {
 				t.Errorf("expected %#v got %#v", tt.expectedResponses, rsp.responses)
@@ -225,7 +225,7 @@ func TestTop(t *testing.T) {
 	db, cleanup := makeScratchDB(t)
 	defer cleanup()
 
-	populateEntitiesInDB(db, []entity{
+	populateEntitiesInDB(db, []Entity{
 		{Name: "A", Karma: 10},
 		{Name: "B", Karma: 9},
 		{Name: "C", Karma: 8},
@@ -241,10 +241,10 @@ func TestTop(t *testing.T) {
 
 	cases := []struct {
 		name     string
-		input    request
+		input    Request
 		expected testResponse
 	}{
-		{"returns the top 3", request{message: "3"}, testResponse{responseChannelMessage, entityToLeaderboard([]entity{
+		{"returns the top 3", Request{Message: "3"}, testResponse{responseChannelMessage, entityToLeaderboard([]Entity{
 			{Name: "A", Karma: 10},
 			{Name: "B", Karma: 9},
 			{Name: "C", Karma: 8},
@@ -254,7 +254,7 @@ func TestTop(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			top(tt.input, &rsp, db)
+			Top(tt.input, &rsp, db)
 
 			assertNumResponses(t, rsp, 1)
 			if tt.expected != rsp.responses[0] {
@@ -265,17 +265,17 @@ func TestTop(t *testing.T) {
 
 	ignoreCases := []struct {
 		name  string
-		input request
+		input Request
 	}{
-		{"in a DM context", request{isDM: true}},
-		{"zero limit", request{message: "0"}},
-		{"negative limit", request{message: "-1"}},
+		{"in a DM context", Request{IsDM: true}},
+		{"zero limit", Request{Message: "0"}},
+		{"negative limit", Request{Message: "-1"}},
 	}
 
 	for _, tt := range ignoreCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			top(tt.input, &rsp, db)
+			Top(tt.input, &rsp, db)
 			assertNumResponses(t, rsp, 0)
 		})
 	}
@@ -285,7 +285,7 @@ func TestBot(t *testing.T) {
 	db, cleanup := makeScratchDB(t)
 	defer cleanup()
 
-	populateEntitiesInDB(db, []entity{
+	populateEntitiesInDB(db, []Entity{
 		{Name: "A", Karma: 10},
 		{Name: "B", Karma: 9},
 		{Name: "C", Karma: 8},
@@ -301,10 +301,10 @@ func TestBot(t *testing.T) {
 
 	cases := []struct {
 		name     string
-		input    request
+		input    Request
 		expected testResponse
 	}{
-		{"returns the bottom 3", request{message: "3"}, testResponse{responseChannelMessage, entityToLeaderboard([]entity{
+		{"returns the bottom 3", Request{Message: "3"}, testResponse{responseChannelMessage, entityToLeaderboard([]Entity{
 			{Name: "K", Karma: 0},
 			{Name: "J", Karma: 1},
 			{Name: "I", Karma: 2},
@@ -314,7 +314,7 @@ func TestBot(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			bot(tt.input, &rsp, db)
+			Bot(tt.input, &rsp, db)
 
 			assertNumResponses(t, rsp, 1)
 			if tt.expected != rsp.responses[0] {
@@ -325,17 +325,17 @@ func TestBot(t *testing.T) {
 
 	ignoreCases := []struct {
 		name  string
-		input request
+		input Request
 	}{
-		{"in a DM context", request{isDM: true}},
-		{"zero limit", request{message: "0"}},
-		{"negative limit", request{message: "-1"}},
+		{"in a DM context", Request{IsDM: true}},
+		{"zero limit", Request{Message: "0"}},
+		{"negative limit", Request{Message: "-1"}},
 	}
 
 	for _, tt := range ignoreCases {
 		t.Run(tt.name, func(t *testing.T) {
 			var rsp responseSink
-			top(tt.input, &rsp, db)
+			Top(tt.input, &rsp, db)
 			assertNumResponses(t, rsp, 0)
 		})
 	}
@@ -347,65 +347,65 @@ func TestRouter(t *testing.T) {
 
 	cases := []struct {
 		name   string
-		req    request
+		req    Request
 		routes []route
 	}{
-		{"no routes", request{message: "asdf"}, []route{}},
-		{"catchall", request{}, []route{
-			{"help", func(req request, rsp responseWriter) {
+		{"no routes", Request{Message: "asdf"}, []route{}},
+		{"catchall", Request{}, []route{
+			{"help", func(req Request, rsp ResponseWriter) {
 				t.Errorf("expected to be routed to catchall, but wasn't")
 			}},
-			{"*", func(req request, rsp responseWriter) {
+			{"*", func(req Request, rsp ResponseWriter) {
 				// yay
 			}},
 		}},
-		{"username and command is stripped", request{message: bot + " help pass"}, []route{
-			{"help", func(req request, rsp responseWriter) {
-				if req.message != "pass" {
-					t.Errorf("got %s, want %s", req.message, "pass")
+		{"username and command is stripped", Request{Message: bot + " help pass"}, []route{
+			{"help", func(req Request, rsp ResponseWriter) {
+				if req.Message != "pass" {
+					t.Errorf("got %s, want %s", req.Message, "pass")
 				}
 			}},
-			{"*", func(req request, rsp responseWriter) {
+			{"*", func(req Request, rsp ResponseWriter) {
 				t.Errorf("fell into catchall, should have been routed elsewhere")
 			}},
 		}},
-		{"username is required outside of DMs", request{message: "help"}, []route{
-			{"help", func(req request, rsp responseWriter) {
+		{"username is required outside of DMs", Request{Message: "help"}, []route{
+			{"help", func(req Request, rsp ResponseWriter) {
 				t.Errorf("made it to subcommand but bot wasn't mentioned")
 			}},
-			{"*", func(req request, rsp responseWriter) {
+			{"*", func(req Request, rsp ResponseWriter) {
 				// yay
 			}},
 		}},
-		{"username is optional in DMs", request{message: "help", isDM: true}, []route{
-			{"help", func(req request, rsp responseWriter) {
+		{"username is optional in DMs", Request{Message: "help", IsDM: true}, []route{
+			{"help", func(req Request, rsp ResponseWriter) {
 				// yay
 			}},
-			{"*", func(req request, rsp responseWriter) {
+			{"*", func(req Request, rsp ResponseWriter) {
 				t.Errorf("fell into catchall, should have been routed elsewhere")
 			}},
 		}},
-		{"can use username in DMs if preferred", request{message: bot + " help", isDM: true}, []route{
-			{"help", func(req request, rsp responseWriter) {
+		{"can use username in DMs if preferred", Request{Message: bot + " help", IsDM: true}, []route{
+			{"help", func(req Request, rsp ResponseWriter) {
 				// yay
 			}},
-			{"*", func(req request, rsp responseWriter) {
+			{"*", func(req Request, rsp ResponseWriter) {
 				t.Errorf("fell into catchall, should have been routed elsewhere")
 			}},
 		}},
-		{"commands must be individual word", request{message: bot + " helpasdf"}, []route{
-			{"help", func(req request, rsp responseWriter) {
+		{"commands must be individual word", Request{Message: bot + " helpasdf"}, []route{
+			{"help", func(req Request, rsp ResponseWriter) {
 				t.Errorf("should have fallen into catchall helpasdf != help: %#v", req)
 			}},
-			{"*", func(req request, rsp responseWriter) {
+			{"*", func(req Request, rsp ResponseWriter) {
 				// yay
 			}},
 		}},
-		{"commands must be individual word in DMs", request{message: " helpasdf", isDM: true}, []route{
-			{"help", func(req request, rsp responseWriter) {
+		{"commands must be individual word in DMs", Request{Message: " helpasdf", IsDM: true}, []route{
+			{"help", func(req Request, rsp ResponseWriter) {
 				t.Errorf("should have fallen into catchall helpasdf != help: %#v", req)
 			}},
-			{"*", func(req request, rsp responseWriter) {
+			{"*", func(req Request, rsp ResponseWriter) {
 				// yay
 			}},
 		}},
@@ -413,18 +413,18 @@ func TestRouter(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			r := router{}
-			r.bot = bot
+			r := Router{}
+			r.Bot = bot
 			for _, route := range tt.routes {
-				r.addRoute(route.match, route.cmd)
+				r.AddRoute(route.match, route.cmd)
 			}
 
-			r.route(tt.req, nil)
+			r.Route(tt.req, nil)
 		})
 	}
 }
 
-func entityToLeaderboard(entities []entity) string {
+func entityToLeaderboard(entities []Entity) string {
 	builder := strings.Builder{}
 	for _, e := range entities {
 		builder.WriteString(testFormatKarmaLeaderboardEntry(e.Name, e.Karma))
@@ -446,12 +446,12 @@ func assertHasAllSubstrings(t *testing.T, haystack string, needles []string) {
 	}
 }
 
-func assertDataChanged(t *testing.T, actual, expected []entity) {
+func assertDataChanged(t *testing.T, actual, expected []Entity) {
 	if len(actual) != len(expected) {
 		t.Errorf("number of actual results different from expected: actual = %#v expected = %#v", actual, expected)
 	}
 
-	var expectMap = make(map[string]entity)
+	var expectMap = make(map[string]Entity)
 	for _, a := range actual {
 		expectMap[a.Name] = a
 	}
@@ -521,20 +521,20 @@ func makeScratchDB(t *testing.T) (*gorm.DB, func()) {
 		t.Fatalf("%s", err)
 	}
 
-	_ = db.AutoMigrate(&entity{}, &config{})
+	_ = db.AutoMigrate(&Entity{}, &Config{})
 
 	return db, func() {
 		os.Remove(dbName)
 	}
 }
 
-func populateEntitiesInDB(db *gorm.DB, rows []entity) {
+func populateEntitiesInDB(db *gorm.DB, rows []Entity) {
 	for _, r := range rows {
 		db.Create(&r)
 	}
 }
 
-func populateConfigsInDB(db *gorm.DB, rows []config) {
+func populateConfigsInDB(db *gorm.DB, rows []Config) {
 	for _, c := range rows {
 		db.Create(&c)
 	}
