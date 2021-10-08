@@ -416,7 +416,7 @@ func TestRouter(t *testing.T) {
 			r := Router{}
 			r.Bot = bot
 			for _, route := range tt.routes {
-				r.AddRoute(route.match, route.cmd)
+				r.addRoute(route.match, route.cmd)
 			}
 
 			r.Route(tt.req, nil)
