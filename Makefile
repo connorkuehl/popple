@@ -22,3 +22,4 @@ test:
 
 clean:
 	@rm -rf ./cmd/discord/popple/popple
+	@go clean -r
