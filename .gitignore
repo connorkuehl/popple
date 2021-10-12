@@ -1,6 +1,6 @@
 /.popplerc
 /test-fixtures
-/cmd/discord/popple/popple
+/popple
 bot.token
 popple.sqlite
 

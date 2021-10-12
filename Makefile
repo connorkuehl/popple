@@ -3,23 +3,28 @@ BUILD := $(shell git describe --tags --dirty 2>/dev/null || echo "$(VERSION)")
 
 LD_FLAGS := "-X 'github.com/connorkuehl/popple.Version=$(BUILD)'"
 
-.PHONY: build clean lib test
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
+
+.PHONY: build clean install test
 
 all: build
 
-build: lib ./cmd/discord/popple/popple
+build: popple
 
-./cmd/discord/popple/popple:
-	@echo "==> building $@"
+popple:
 	@go build -v -ldflags=$(LD_FLAGS) -o $@ ./cmd/discord/popple/
-
-lib:
-	@echo "==> checking popple"
-	@go build -v -ldflags=$(LD_FLAGS)
 
 test:
 	@go test -v -ldflags=$(LD_FLAGS) ./...
 
+install: popple
+	@mkdir -m 755 -p $(BINDIR)
+	@install -m 755 popple $(BINDIR)/popple
+
+uninstall:
+	rm -f $(BINDIR)/popple
+
 clean:
-	@rm -rf ./cmd/discord/popple/popple
+	@rm -f popple
 	@go clean -r
