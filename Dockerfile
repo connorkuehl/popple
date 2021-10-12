@@ -8,7 +8,7 @@ RUN make
 FROM alpine:latest
 WORKDIR /root/
 
-COPY --from=build /popple/cmd/discord/popple/popple .
+COPY --from=build /popple/popple .
 
 # docker run --rm -v path/to/db:/root/popple.sqlite \
 #                       -v path/to/token:/root/bot.token \
