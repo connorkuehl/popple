@@ -6,13 +6,16 @@ LD_FLAGS := "-X 'github.com/connorkuehl/popple.Version=$(BUILD)'"
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 
+GOSRC := $(shell find . -type f -name '*.go')
+GOSRC += go.mod go.sum
+
 .PHONY: build clean install test
 
 all: build
 
 build: popple
 
-popple:
+popple: $(GOSRC)
 	@go build -v -ldflags=$(LD_FLAGS) -o $@ ./cmd/discord/popple/
 
 test:
