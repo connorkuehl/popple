@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -98,12 +99,14 @@ func main() {
 	log.Printf("Popple is online, running version %s\n", popple.Version)
 
 	cancel := make(chan struct{})
-	cancelAck := make(chan uint)
 	workQueue := make(chan func(), *numJobs)
+
+	var wg sync.WaitGroup
+	wg.Add(int(*numWorkers))
 
 	for i := uint(0); i < *numWorkers; i++ {
 		log.Printf("starting worker %d\n", i)
-		go worker(i, workQueue, cancel, cancelAck)
+		go worker(workQueue, cancel, &wg)
 	}
 
 	app, err := popple.NewApp(db, start)
@@ -137,38 +140,30 @@ func main() {
 	detachMessageCreateHandler()
 	log.Println("detached handler, sending cancel request to workers")
 
-	workersRemaining := *numWorkers
-
 	deadline := time.After(*timeout)
+	workersDone := make(chan struct{})
 
-workerwait:
-	for {
-		select {
-		case <-deadline:
-			log.Println("cancellation deadline has passed")
-			break workerwait
-		case wid := <-cancelAck:
-			workersRemaining--
-			log.Printf("worker %d acknowledged cancellation\n", wid)
-			if workersRemaining == 0 {
-				close(workQueue)
-				log.Println("all workers have acknowledged cancellation")
-				break workerwait
-			}
-		}
-	}
-	if workersRemaining != 0 {
-		log.Printf("%d workers failed to acknowledge cancellation, moving on without them\n", workersRemaining)
+	go func() {
+		wg.Wait()
+		close(workersDone)
+	}()
+
+	select {
+	case <-deadline:
+		log.Println("cancellation deadline has passed")
+	case <-workersDone:
+		log.Println("all workers have acknowledged cancellation")
 	}
 
 	session.Close()
 }
 
-func worker(wid uint, workQueue <-chan func(), cancel <-chan struct{}, cancelAck chan<- uint) {
+func worker(workQueue <-chan func(), cancel <-chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	for {
 		select {
 		case <-cancel:
-			cancelAck <- wid
 			return
 		case cmd := <-workQueue:
 			cmd()
