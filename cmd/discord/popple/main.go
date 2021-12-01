@@ -2,6 +2,7 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"io/ioutil"
 	"log"
@@ -13,9 +14,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	_ "modernc.org/sqlite"
 
 	"github.com/connorkuehl/popple"
 )
@@ -73,12 +72,7 @@ func main() {
 		*numWorkers = 1
 	}
 
-	db, err := gorm.Open(sqlite.Open(*dbFile), &gorm.Config{
-		/* FIXME: Might want to tweak this some more. I turned it off because
-		it would log when an entry is not found and that's fine, especially for
-		the !karma command. */
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
+	db, err := sql.Open("sqlite", *dbFile)
 	if err != nil {
 		log.Fatalf("Failed to open database: %s\n", err)
 	}

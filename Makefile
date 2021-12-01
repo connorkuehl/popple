@@ -6,7 +6,7 @@ LD_FLAGS := "-X 'github.com/connorkuehl/popple.Version=$(BUILD)'"
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 
-GOSRC := $(shell find . -type f -name '*.go')
+GOSRC := $(shell find . -type f -name '*.go' -o -name '*.sql')
 GOSRC += go.mod go.sum
 
 .PHONY: build clean install test
