@@ -1,24 +1,22 @@
 package popple
 
 import (
+	"database/sql"
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/connorkuehl/popple/internal/data"
 )
 
 // App is an instance of a Popple bot.
 type App struct {
-	db     *gorm.DB
+	db     *sql.DB
 	Router *Router
 }
 
 // NewApp creates a new Popple instance.
-func NewApp(db *gorm.DB, start time.Time) (*App, error) {
-	if err := db.AutoMigrate(&Config{}); err != nil {
-		return nil, err
-	}
-
-	if err := db.AutoMigrate(&Entity{}); err != nil {
+func NewApp(db *sql.DB, start time.Time) (*App, error) {
+	err := data.MakeTables(db)
+	if err != nil {
 		return nil, err
 	}
 

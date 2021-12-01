@@ -9,6 +9,8 @@ package popple
 
 import (
 	"bufio"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -16,7 +18,7 @@ import (
 	"time"
 	"unicode"
 
-	"gorm.io/gorm"
+	"github.com/connorkuehl/popple/internal/data"
 )
 
 // Router routes an incoming message to the appropriate Popple
@@ -102,7 +104,7 @@ type commandFn func(req Request, rsp ResponseWriter)
 
 // CheckKarma allows server inhabitants to query karma levels
 // for subjects they have incremented or decremented over time.
-func CheckKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
+func CheckKarma(req Request, rsp ResponseWriter, db *sql.DB) {
 	if req.IsDM {
 		return
 	}
@@ -114,9 +116,14 @@ func CheckKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
 	reply := strings.Builder{}
 
 	for subject := range subjects {
-		var entty Entity
-		db.Where(&Entity{GuildID: req.GuildID, Name: subject}).First(&entty)
-		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, subject, entty.Karma))
+		entity := &data.Entity{ServerID: req.GuildID, Name: subject}
+		err := data.GetEntity(db, entity)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("failed to get entity: %v", err)
+			return
+		}
+
+		reply.WriteString(fmt.Sprintf("%s%s has %d karma.", sep, subject, entity.Karma))
 		sep = " "
 	}
 
@@ -132,7 +139,7 @@ func CheckKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
 
 // SetAnnounce allows server inhabitants to enable or disable Popple
 // announcements when karma is modified from a message.
-func SetAnnounce(req Request, rsp ResponseWriter, db *gorm.DB) {
+func SetAnnounce(req Request, rsp ResponseWriter, db *sql.DB) {
 	if req.IsDM {
 		return
 	}
@@ -155,10 +162,19 @@ func SetAnnounce(req Request, rsp ResponseWriter, db *gorm.DB) {
 		return
 	}
 
-	var cfg Config
-	db.Where(&Config{GuildID: req.GuildID}).FirstOrCreate(&cfg)
+	cfg := &data.Config{ServerID: req.GuildID}
+	err := data.GetConfig(db, cfg)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		log.Printf("failed to get config: %v", err)
+		return
+	}
+
 	cfg.NoAnnounce = !on
-	db.Save(cfg)
+	err = data.PutConfig(db, *cfg)
+	if err != nil {
+		log.Printf("failed to put config: %v", err)
+		return
+	}
 
 	if err := rsp.React("👍"); err != nil {
 		log.Printf("Error when sending reply: %v", err)
@@ -188,7 +204,7 @@ func SendVersion(req Request, rsp ResponseWriter) {
 // Popple will scan the entire message, parse out any karma subjects,
 // count up the karma, and reply with the karma modifications that the
 // message has made resulted in.
-func ModKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
+func ModKarma(req Request, rsp ResponseWriter, db *sql.DB) {
 	if req.IsDM {
 		return
 	}
@@ -203,16 +219,26 @@ func ModKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
 			continue
 		}
 
-		var entty Entity
+		entity := &data.Entity{ServerID: req.GuildID, Name: subject}
+		err := data.GetEntity(db, entity)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("failed to get entity: %v", err)
+			continue
+		}
 
-		db.Where(&Entity{GuildID: req.GuildID, Name: subject}).FirstOrCreate(&entty)
-		entty.Karma += netKarma
+		entity.Karma += netKarma
 
-		reply.WriteString(fmt.Sprintf("%s%s.", sep, formatKarmaStatement(entty.Name, entty.Karma)))
-		if entty.Karma == 0 {
-			db.Delete(entty)
+		reply.WriteString(fmt.Sprintf("%s%s.", sep, formatKarmaStatement(entity.Name, entity.Karma)))
+		if entity.Karma == 0 {
+			err := data.DeleteEntity(db, *entity)
+			if err != nil {
+				log.Printf("failed to delete entity: %v", err)
+			}
 		} else {
-			db.Save(entty)
+			err := data.PutEntity(db, *entity)
+			if err != nil {
+				log.Printf("failed to put entity: %v", err)
+			}
 		}
 		sep = " "
 	}
@@ -221,8 +247,12 @@ func ModKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
 		return
 	}
 
-	var cfg Config
-	db.Where(&Config{GuildID: req.GuildID}).FirstOrCreate(&cfg)
+	cfg := &data.Config{ServerID: req.GuildID}
+	err := data.GetConfig(db, cfg)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		log.Printf("failed to get config: %v", err)
+		return
+	}
 
 	if !cfg.NoAnnounce {
 		if err := rsp.SendMessageToChannel(reply.String()); err != nil {
@@ -233,14 +263,14 @@ func ModKarma(req Request, rsp ResponseWriter, db *gorm.DB) {
 
 // Bot allows server inhabitants to see who is "in the lead" for
 // the LEAST amount of karma.
-func Bot(req Request, rsp ResponseWriter, db *gorm.DB) {
-	board(req, rsp, db, "asc")
+func Bot(req Request, rsp ResponseWriter, db *sql.DB) {
+	board(req, rsp, db, data.Ascending)
 }
 
 // Top allows server inhabitants to see who is in the lead in terms
 // of karma accumulated.
-func Top(req Request, rsp ResponseWriter, db *gorm.DB) {
-	board(req, rsp, db, "desc")
+func Top(req Request, rsp ResponseWriter, db *sql.DB) {
+	board(req, rsp, db, data.Descending)
 }
 
 // Uptime creates a formatted string informing a user of the time since
@@ -252,7 +282,7 @@ func Uptime(req Request, rsp ResponseWriter, start time.Time) {
 	}
 }
 
-func board(req Request, rsp ResponseWriter, db *gorm.DB, sort string) {
+func board(req Request, rsp ResponseWriter, db *sql.DB, sort data.Sort) {
 	if req.IsDM {
 		return
 	}
@@ -272,8 +302,16 @@ func board(req Request, rsp ResponseWriter, db *gorm.DB, sort string) {
 		return
 	}
 
-	var entities []Entity
-	db.Where(&Entity{GuildID: req.GuildID}).Order(fmt.Sprintf("karma %s", sort)).Limit(limit).Find(&entities)
+	getEntitiesFn := data.GetTopEntities
+	if sort == data.Descending {
+		getEntitiesFn = data.GetBotEntities
+	}
+
+	entities, err := getEntitiesFn(db, req.GuildID, uint(limit))
+	if err != nil {
+		log.Printf("failed to get entities: %v", err)
+		return
+	}
 
 	board := strings.Builder{}
 	for _, entity := range entities {
