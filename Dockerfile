@@ -2,7 +2,7 @@ FROM golang:1.17.0-alpine AS build
 RUN mkdir /builddir
 ADD . /builddir
 WORKDIR /builddir
-RUN go build ./...
+RUN go build ./cmd/discord/popple
 
 FROM alpine:latest
 RUN mkdir /data
