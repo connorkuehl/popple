@@ -190,14 +190,6 @@ func SendHelp(req Request, rsp ResponseWriter) {
 	}
 }
 
-// SendVersion allows server inhabitants to see what Popple revision
-// is running.
-func SendVersion(req Request, rsp ResponseWriter) {
-	if err := rsp.SendMessageToChannel(fmt.Sprintf("I'm running version %s.", Version)); err != nil {
-		log.Printf("Error sending version: %s", err)
-	}
-}
-
 // ModKarma is the default Popple action that will be taken when no other
 // subcommand is identified in the message.
 //

@@ -3,9 +3,9 @@
 Clone or otherwise download the Popple source code, then:
 
 ```console
-$ make
-$ make test
-$ go install .
+$ go test ./...
+$ go build ./cmd/discord/popple
+$ go install ./cmd/discord/popple
 ```
 
 Alternatively:

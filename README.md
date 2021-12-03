@@ -7,7 +7,7 @@ A karma bot for Discord.
 Clone or otherwise download the Popple source code and run:
 
 ```console
-$ make
+$ go build ./...
 ```
 
 The `go` toolchain should download the dependencies and build Popple.
@@ -45,7 +45,6 @@ $ ./popple -token /path/to/popple_token
 | @Popple bot | Integer > 0 | Prints the `n` subjects with the least karma. The default value is `10` if a value is not supplied |
 | @Popple top | Integer > 0 | Prints the top `n` subjects with the most karma. The default value is `10` if a value is not supplied |
 | @Popple uptime | N/A | Prints the bot's uptime |
-| @Popple version | N/A | Prints the bot's version |
 | Subject++ | N/A | Increases Subject's karma |
 | Subject-- | N/A | Decreases Subject's karma |
 | (Subject with space or - +) | N/A | Parentheses may be used for complicated subjects with whitespace or special symbols |

@@ -39,9 +39,6 @@ func NewApp(db *sql.DB, start time.Time) (*App, error) {
 	r.addRoute("uptime", func(req Request, rsp ResponseWriter) {
 		Uptime(req, rsp, start)
 	})
-	r.addRoute("version", func(req Request, rsp ResponseWriter) {
-		SendVersion(req, rsp)
-	})
 
 	// just check for karma operations by default if no other commands
 	// were matched
