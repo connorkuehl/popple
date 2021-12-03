@@ -1,16 +1,13 @@
 FROM golang:1.17.0-alpine AS build
 RUN apk add build-base git
-RUN mkdir /popple
-ADD . /popple
-WORKDIR /popple
+RUN mkdir /builddir
+ADD . /builddir
+WORKDIR /builddir
 RUN make
 
 FROM alpine:latest
-WORKDIR /root/
+RUN mkdir /data
+WORKDIR /data
+COPY --from=build /builddir/popple /usr/local/bin/popple
 
-COPY --from=build /popple/popple .
-
-# docker run --rm -v path/to/db:/root/popple.sqlite \
-#                       -v path/to/token:/root/bot.token \
-#                       image_name
-ENTRYPOINT ["/root/popple"]
+ENTRYPOINT ["/usr/local/bin/popple"]
