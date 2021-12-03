@@ -90,7 +90,7 @@ func main() {
 	if err := session.Open(); err != nil {
 		log.Fatalf("Error connecting to Discord: %s\n", err)
 	}
-	log.Printf("Popple is online, running version %s\n", popple.Version)
+	log.Println("Popple is online")
 
 	cancel := make(chan struct{})
 	workQueue := make(chan func(), *numJobs)
