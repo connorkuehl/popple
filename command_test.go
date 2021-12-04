@@ -54,6 +54,12 @@ func TestModKarma(t *testing.T) {
 			WithArgs("hello", "3").
 			WillReturnRows(mock.NewRows(entityColumns))
 
+		mock.ExpectBegin()
+		mock.ExpectExec(sql.PutEntity).
+			WithArgs(1, "hello", "3").
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+
 		mock.ExpectQuery(sql.GetConfig).
 			WithArgs("3").
 			// I'm not in love with using time.Now() but none of the
