@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -24,16 +25,16 @@ import (
 // This file is relative to the Popple process's current working directory.
 const Database string = "popple.sqlite"
 
-// DefaultWorkers is the default number of goroutines that will be spun up
-// if not overridden on the command line.
-const DefaultWorkers uint = 4
+var defaultWorkers uint
 
-// DefaultJobs is the maximum number of pending jobs that will be held before
-// new jobs start getting dropped.
-//
-// As far as Popple is concerned, a "job" is a pending Discord message that
-// Popple must process to determine how it will act (or not act).
-const DefaultJobs uint = 128
+func init() {
+	numCPU := runtime.NumCPU()
+	if numCPU < 1 {
+		panic("zero CPUs")
+	}
+
+	defaultWorkers = uint(numCPU)
+}
 
 type response struct {
 	s *discordgo.Session
@@ -58,9 +59,8 @@ func (r response) React(emojiID string) error {
 func main() {
 	start := time.Now()
 	tokenFile := flag.String("token", "", "path to file containing bot token")
-	numWorkers := flag.Uint("workers", DefaultWorkers, "Number of worker threads to spawn")
+	numWorkers := flag.Uint("workers", defaultWorkers, "Number of worker threads to spawn")
 	dbFile := flag.String("db", Database, "Path to database file")
-	numJobs := flag.Uint("jobs", DefaultJobs, "Maximum queue size for jobs")
 	timeout := flag.Duration("deadline", 3*time.Second, "How long to wait for workers to exit when shutting down")
 	flag.Parse()
 
@@ -93,7 +93,7 @@ func main() {
 	log.Println("Popple is online")
 
 	cancel := make(chan struct{})
-	workQueue := make(chan func(), *numJobs)
+	workQueue := make(chan func(), *numWorkers+1)
 
 	var wg sync.WaitGroup
 	wg.Add(int(*numWorkers))
