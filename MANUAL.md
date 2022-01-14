@@ -42,7 +42,7 @@ Wants=network-online.target
 Type=simple
 User=popple
 Group=popple
-ExecStart=/srv/popple/go/bin/popple -token /srv/popple/.popple_token -db /srv/popple/db.sqlite
+ExecStart=/usr/local/bin/popple -token-file /srv/popple/popple.token -database /srv/popple/popple.sqlite
 Restart=on-failure
 RestartSec=5
 
@@ -58,11 +58,9 @@ $ systemctl start popple
 ## Deploying (container/podman/docker)
 
 ```console
-$ podman pull docker.io/conkue/popple:latest
-$ podman run -d --name popple \
-    -v /srv/popple/bot.token:/root/bot.token:Z \
-    -v /srv/popple/popple.sqlite:/root/popple.sqlite:Z \
-    docker.io/conkue/popple:latest \
-    -db /root/popple.sqlite \
-    -token /root/bot.token
+$ docker pull docker.io/conkue/popple:latest
+$ docker run -d --restart always \
+	--name popple \
+	-v /srv:/data \
+	popple:latest -token-file popple.token -database popple.sqlite
 ```

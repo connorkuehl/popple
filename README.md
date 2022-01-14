@@ -2,6 +2,18 @@
 
 A karma bot for Discord.
 
+## Overview
+
+* [DEVELOPING.md](DEVELOPING.md) is an introduction to the Popple
+  architecture and hints on how to get started developing your feature
+  or bug-fix.
+
+* [MANUAL.md](MANUAL.md) is for learning how to deploy Popple.
+
+* Popple has some additional configuration options. Run `./popple -help`
+  for more info. These are optional, but could be helpful for adapting
+  Popple to better suit your needs.
+
 ## Building
 
 Clone or otherwise download the Popple source code and run:
@@ -11,14 +23,6 @@ $ go build ./...
 ```
 
 The `go` toolchain should download the dependencies and build Popple.
-
-## Installing or Deploying
-
-See [MANUAL.md](./MANUAL.md) for a task-based knowledge base.
-
-Popple has some additional configuration options. Run `./popple -help`
-for more info. These are optional, but could be helpful for adapting Popple
-to better suit your needs.
 
 ## Running
 
@@ -44,7 +48,6 @@ $ ./popple -token /path/to/popple_token
 | @Popple karma | Something with karma | Prints the subjects' karma level. Multiple subjects' karma levels may be checked |
 | @Popple bot | Integer > 0 | Prints the `n` subjects with the least karma. The default value is `10` if a value is not supplied |
 | @Popple top | Integer > 0 | Prints the top `n` subjects with the most karma. The default value is `10` if a value is not supplied |
-| @Popple uptime | N/A | Prints the bot's uptime |
 | Subject++ | N/A | Increases Subject's karma |
 | Subject-- | N/A | Decreases Subject's karma |
 | (Subject with space or - +) | N/A | Parentheses may be used for complicated subjects with whitespace or special symbols |
