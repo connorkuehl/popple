@@ -1,41 +1,22 @@
-package popple
+package parse
 
 import (
 	"strings"
 	"unicode"
 )
 
-// Module parse (unsurprisingly) parses karma subjects from text.
-//
-// A karma subject is an entity whose karma is either incremented
-// or decremented.
-//
-// A valid subject could be a word containing any kinds of characters
-// (except a backtick `) ending in either a `++`` or a `--``.
-//
-// Example: HelloWorld++ -> subject name: HelloWorld +1 karma
-// Example: Good`Bye++ -> subject name: Bye +1 karma (note that
-// the backtick excluded the first part of the word from the subject)
-//
-// Subjects can contain whitespace or any other characters if they are
-// enclosed in parentheses.
-//
-// Example: (Hello World)-- -> subject name: Hello World -1 karma
-
-// Subject represents a karma operation on a named entity.
-type subject struct {
-	name  string
-	karma int
+type Subject struct {
+	Name  string
+	Karma int
 }
 
-// parseSubjects parses subjects from text.
-func parseSubjects(s string) []subject {
-	subjects := make([]subject, 0, 32)
+func Subjects(s string) []Subject {
+	subjects := make([]Subject, 0, 32)
 
 	_, items := lex([]rune(s))
 	for i := range items {
 		sub := parseSubject(i)
-		if len(sub.name) != 0 {
+		if len(sub.Name) != 0 {
 			subjects = append(subjects, sub)
 		}
 	}
@@ -52,18 +33,18 @@ func lex(input []rune) (*lexer, chan item) {
 	return l, l.items
 }
 
-func parseSubject(i item) subject {
+func parseSubject(i item) Subject {
 	switch i.kind {
 	case itemText:
 		return parseSubjectPlain(i)
 	case itemTextInParens:
 		return parseSubjectParens(i)
 	default:
-		return subject{}
+		return Subject{}
 	}
 }
 
-func parseSubjectPlain(i item) subject {
+func parseSubjectPlain(i item) Subject {
 	name := string(i.value)
 	name = strings.TrimPrefix(name, "@")
 
@@ -77,10 +58,10 @@ func parseSubjectPlain(i item) subject {
 	if karma != 0 {
 		name = name[:len(name)-2]
 	}
-	return subject{name, karma}
+	return Subject{name, karma}
 }
 
-func parseSubjectParens(i item) subject {
+func parseSubjectParens(i item) Subject {
 	name := string(i.value)
 	karma := 0
 	switch {
@@ -95,7 +76,7 @@ func parseSubjectParens(i item) subject {
 	default:
 		name = name[1 : len(name)-1]
 	}
-	return subject{name, karma}
+	return Subject{name, karma}
 }
 
 type lexer struct {

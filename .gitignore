@@ -6,3 +6,8 @@ popple.sqlite
 
 #goland
 .idea
+/.vscode
+/cmd/discord/popple/popple
+/cmd/discord/popple/popple.token
+c.out
+c.html

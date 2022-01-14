@@ -1,0 +1,9 @@
+{
+    "version": "1",
+    "packages": [{
+        "schema": "internal/sqlite3/schema.sql",
+        "queries": "internal/sqlite3/queries.sql",
+        "name": "data",
+        "path": "internal/sqlite3/data"
+    }]
+}
