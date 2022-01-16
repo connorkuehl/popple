@@ -119,3 +119,14 @@ func GetLeaderboard(pl adapter.PersistenceLayer, serverID string, top bool, limi
 	}()
 	return f
 }
+
+type SetAnnounceF chan error
+
+func SetAnnounce(pl adapter.PersistenceLayer, serverID string, on bool) SetAnnounceF {
+	f := make(chan error, 1)
+	go func() {
+		_ = pl.CreateConfig(serverID)
+		f <- pl.PutConfig(adapter.Config{ServerID: serverID, NoAnnounce: !on})
+	}()
+	return f
+}

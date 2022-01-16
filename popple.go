@@ -87,8 +87,7 @@ func (p *Popple) SetAnnounce(serverID string, body io.Reader) error {
 		return ErrInvalidAnnounceSetting
 	}
 
-	_ = p.pl.CreateConfig(serverID)
-	return p.pl.PutConfig(adapter.Config{ServerID: serverID, NoAnnounce: !on})
+	return <-popple.SetAnnounce(p.pl, serverID, on)
 }
 
 func (p *Popple) Karma(serverID string, body io.Reader) (map[string]int, error) {
