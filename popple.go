@@ -46,24 +46,10 @@ func (p *Popple) BumpKarma(serverID string, body io.Reader) (map[string]int, boo
 
 	bumps := karma.Parse(text.String())
 
-	levels := make(map[string]int)
-	for n, k := range bumps {
-		if k == 0 {
-			continue
-		}
-
-		updated, err := p.pl.AddKarmaToEntity(
-			adapter.Entity{
-				Name:     n,
-				ServerID: serverID,
-			},
-			k,
-		)
-		if err != nil {
-			return nil, false, err
-		}
-
-		levels[n] = int(updated.Karma)
+	newlvlsr := <-popple.AddKarmaToEntities(p.pl, serverID, bumps)
+	levels, err := newlvlsr.Levels, newlvlsr.Err
+	if err != nil {
+		return nil, false, err
 	}
 
 	cfgr := <-cfgf

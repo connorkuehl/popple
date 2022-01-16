@@ -7,6 +7,41 @@ import (
 	"github.com/connorkuehl/popple/adapter"
 )
 
+type AddKarmaToEntitiesResult struct {
+	Levels map[string]int
+	Err    error
+}
+
+type AddKarmaToEntitiesF chan AddKarmaToEntitiesResult
+
+func AddKarmaToEntities(pl adapter.PersistenceLayer, serverID string, levels map[string]int) AddKarmaToEntitiesF {
+	f := make(chan AddKarmaToEntitiesResult, 1)
+	go func() {
+		updatedLevels := make(map[string]int)
+		for who, karma := range levels {
+			if karma == 0 {
+				continue
+			}
+
+			updated, err := pl.AddKarmaToEntity(
+				adapter.Entity{
+					ServerID: serverID,
+					Name:     who,
+				},
+				karma,
+			)
+			if err != nil {
+				f <- AddKarmaToEntitiesResult{Err: err}
+				return
+			}
+
+			updatedLevels[who] = int(updated.Karma)
+		}
+		f <- AddKarmaToEntitiesResult{Levels: updatedLevels}
+	}()
+	return f
+}
+
 type GetConfigResult struct {
 	C   adapter.Config
 	Err error
