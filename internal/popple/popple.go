@@ -23,6 +23,7 @@ func AddKarmaToEntities(pl adapter.PersistenceLayer, serverID string, levels map
 				continue
 			}
 
+			_ = pl.CreateEntity(serverID, who)
 			updated, err := pl.AddKarmaToEntity(
 				adapter.Entity{
 					ServerID: serverID,
