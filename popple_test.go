@@ -13,6 +13,23 @@ import (
 	"github.com/connorkuehl/popple/adapter"
 )
 
+func assertPersisted(t *testing.T, pl adapter.PersistenceLayer, serverID string, want map[string]int) {
+	for n, k := range want {
+		ent, err := pl.GetEntity(serverID, n)
+		if k == 0 {
+			if !errors.Is(err, sql.ErrNoRows) {
+				t.Errorf("got %v, want %v", err, sql.ErrNoRows)
+			}
+			return
+		}
+
+		if int(ent.Karma) != k {
+			t.Errorf("got karma=%d, want karma=%d", ent.Karma, k)
+			return
+		}
+	}
+}
+
 func withEntities(t *testing.T, entities ...adapter.Entity) func(pl adapter.PersistenceLayer) {
 	return func(pl adapter.PersistenceLayer) {
 		for _, entity := range entities {
@@ -96,6 +113,8 @@ func TestBumpKarma(t *testing.T) {
 				t.Errorf("got %v, want %v", levels, tt.want)
 				return
 			}
+
+			assertPersisted(t, pl, tt.serverID, tt.want)
 		})
 	}
 
@@ -137,6 +156,8 @@ func TestBumpKarma(t *testing.T) {
 				t.Errorf("got %v, want %v", levels, tt.want)
 				return
 			}
+
+			assertPersisted(t, pl, tt.serverID, tt.want)
 		})
 	}
 }
