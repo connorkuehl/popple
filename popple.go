@@ -35,7 +35,7 @@ func New(pl adapter.PersistenceLayer) *Popple {
 	return &p
 }
 
-func (p *Popple) BumpKarma(serverID string, body io.Reader) (map[string]int, bool, error) {
+func (p *Popple) BumpKarma(serverID string, body io.Reader) (map[string]int64, bool, error) {
 	cfgf := popple.GetConfig(p.pl, serverID)
 
 	var text strings.Builder
@@ -90,7 +90,7 @@ func (p *Popple) SetAnnounce(serverID string, body io.Reader) error {
 	return <-popple.SetAnnounce(p.pl, serverID, on)
 }
 
-func (p *Popple) Karma(serverID string, body io.Reader) (map[string]int, error) {
+func (p *Popple) Karma(serverID string, body io.Reader) (map[string]int64, error) {
 	var text strings.Builder
 
 	_, err := io.Copy(&text, body)

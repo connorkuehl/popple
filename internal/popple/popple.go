@@ -8,16 +8,16 @@ import (
 )
 
 type AddKarmaToEntitiesResult struct {
-	Levels map[string]int
+	Levels map[string]int64
 	Err    error
 }
 
 type AddKarmaToEntitiesF chan AddKarmaToEntitiesResult
 
-func AddKarmaToEntities(pl adapter.PersistenceLayer, serverID string, levels map[string]int) AddKarmaToEntitiesF {
+func AddKarmaToEntities(pl adapter.PersistenceLayer, serverID string, levels map[string]int64) AddKarmaToEntitiesF {
 	f := make(chan AddKarmaToEntitiesResult, 1)
 	go func() {
-		updatedLevels := make(map[string]int)
+		updatedLevels := make(map[string]int64)
 		for who, karma := range levels {
 			if karma == 0 {
 				continue
@@ -63,16 +63,16 @@ func GetConfig(pl adapter.PersistenceLayer, serverID string) GetConfigF {
 }
 
 type GetLevelsResult struct {
-	Levels map[string]int
+	Levels map[string]int64
 	Err    error
 }
 
 type GetLevelsF chan GetLevelsResult
 
-func GetLevels(pl adapter.PersistenceLayer, serverID string, bumps map[string]int) GetLevelsF {
+func GetLevels(pl adapter.PersistenceLayer, serverID string, bumps map[string]int64) GetLevelsF {
 	f := make(chan GetLevelsResult, 1)
 	go func() {
-		levels := make(map[string]int)
+		levels := make(map[string]int64)
 		for name := range bumps {
 			entt, err := pl.GetEntity(serverID, name)
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {

@@ -13,7 +13,7 @@ import (
 	"github.com/connorkuehl/popple/adapter"
 )
 
-func assertPersisted(t *testing.T, pl adapter.PersistenceLayer, serverID string, want map[string]int) {
+func assertPersisted(t *testing.T, pl adapter.PersistenceLayer, serverID string, want map[string]int64) {
 	for n, k := range want {
 		ent, err := pl.GetEntity(serverID, n)
 		if k == 0 {
@@ -89,12 +89,12 @@ func TestBumpKarma(t *testing.T) {
 	bumps := []struct {
 		serverID string
 		body     string
-		want     map[string]int
+		want     map[string]int64
 	}{
-		{"1", "a++ b-- c++ c++", map[string]int{"a": 1, "b": -1, "c": 2}},
-		{"2", "(a b c d)++", map[string]int{"a b c d": 1}},
-		{"3", "((nest))--", map[string]int{"(nest)": -1}},
-		{"4", "a++ `b--", map[string]int{"a": 1}},
+		{"1", "a++ b-- c++ c++", map[string]int64{"a": 1, "b": -1, "c": 2}},
+		{"2", "(a b c d)++", map[string]int64{"a b c d": 1}},
+		{"3", "((nest))--", map[string]int64{"(nest)": -1}},
+		{"4", "a++ `b--", map[string]int64{"a": 1}},
 	}
 
 	for _, tt := range bumps {
@@ -134,11 +134,11 @@ func TestBumpKarma(t *testing.T) {
 	preexisting := []struct {
 		serverID string
 		body     string
-		want     map[string]int
+		want     map[string]int64
 	}{
-		{"5", "a++", map[string]int{"a": 2}},
-		{"5", "(in parens)++", map[string]int{"in parens": 0}},
-		{"5", "b--", map[string]int{"b": -1}},
+		{"5", "a++", map[string]int64{"a": 2}},
+		{"5", "(in parens)++", map[string]int64{"in parens": 0}},
+		{"5", "b--", map[string]int64{"b": -1}},
 	}
 
 	for _, tt := range preexisting {
@@ -249,7 +249,7 @@ func TestCheckKarma(t *testing.T) {
 			return
 		}
 
-		want := map[string]int{
+		want := map[string]int64{
 			"hotel":  0,
 			"echo":   0,
 			"lima":   0,
@@ -284,7 +284,7 @@ func TestCheckKarma(t *testing.T) {
 			return
 		}
 
-		want := map[string]int{
+		want := map[string]int64{
 			"z":         127,
 			"in parens": -127,
 			"not_here":  0,
