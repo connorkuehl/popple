@@ -36,7 +36,7 @@ func AddKarmaToEntities(pl adapter.PersistenceLayer, serverID string, levels map
 				return
 			}
 
-			updatedLevels[who] = int(updated.Karma)
+			updatedLevels[who] = int64(updated.Karma)
 		}
 		f <- AddKarmaToEntitiesResult{Levels: updatedLevels}
 	}()
@@ -79,7 +79,7 @@ func GetLevels(pl adapter.PersistenceLayer, serverID string, bumps map[string]in
 				f <- GetLevelsResult{Err: err}
 				return
 			}
-			levels[name] = int(entt.Karma)
+			levels[name] = int64(entt.Karma)
 		}
 		f <- GetLevelsResult{Levels: levels}
 	}()
@@ -113,7 +113,7 @@ func GetLeaderboard(pl adapter.PersistenceLayer, serverID string, top bool, limi
 		for _, entity := range entities {
 			entries = append(entries, adapter.LeaderboardEntry{
 				Name:  entity.Name,
-				Karma: int(entity.Karma),
+				Karma: int64(entity.Karma),
 			})
 		}
 		f <- GetLeaderboardResult{Entries: entries}

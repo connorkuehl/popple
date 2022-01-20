@@ -23,7 +23,7 @@ func assertPersisted(t *testing.T, pl adapter.PersistenceLayer, serverID string,
 			return
 		}
 
-		if int(ent.Karma) != k {
+		if int64(ent.Karma) != k {
 			t.Errorf("got karma=%d, want karma=%d", ent.Karma, k)
 			return
 		}
@@ -34,7 +34,7 @@ func withEntities(t *testing.T, entities ...adapter.Entity) func(pl adapter.Pers
 	return func(pl adapter.PersistenceLayer) {
 		for _, entity := range entities {
 			_ = pl.CreateEntity(entity.ServerID, entity.Name)
-			_, err := pl.AddKarmaToEntity(entity, int(entity.Karma))
+			_, err := pl.AddKarmaToEntity(entity, int64(entity.Karma))
 			if err != nil {
 				t.Errorf("failed to add entity %+v to test db: %v", entity, err)
 				return

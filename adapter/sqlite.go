@@ -150,7 +150,7 @@ func (s *Sqlite) PutConfig(cfg Config) error {
 	})
 }
 
-func (s *Sqlite) AddKarmaToEntity(entity Entity, karma int) (Entity, error) {
+func (s *Sqlite) AddKarmaToEntity(entity Entity, karma int64) (Entity, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

@@ -2,7 +2,7 @@ package adapter
 
 type LeaderboardEntry struct {
 	Name  string
-	Karma int
+	Karma int64
 }
 
 type Config struct {
@@ -24,5 +24,5 @@ type PersistenceLayer interface {
 	GetBotEntities(serverID string, limit uint) ([]Entity, error)
 	GetTopEntities(serverID string, limit uint) ([]Entity, error)
 	PutConfig(cfg Config) error
-	AddKarmaToEntity(entity Entity, karma int) (Entity, error)
+	AddKarmaToEntity(entity Entity, karma int64) (Entity, error)
 }
