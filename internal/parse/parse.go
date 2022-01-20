@@ -7,7 +7,7 @@ import (
 
 type Subject struct {
 	Name  string
-	Karma int
+	Karma int64
 }
 
 func Subjects(s string) []Subject {
@@ -81,8 +81,8 @@ func parseSubjectParens(i item) Subject {
 
 type lexer struct {
 	input []rune
-	start int
-	pos   int
+	start int64
+	pos   int64
 	items chan item
 }
 
@@ -127,11 +127,11 @@ func (l *lexer) ignore() {
 	l.start = l.pos
 }
 
-func (l *lexer) first() int {
+func (l *lexer) first() int64 {
 	return l.start
 }
 
-func (l *lexer) set(idx int) {
+func (l *lexer) set(idx int64) {
 	if idx < 0 || idx >= len(l.input) {
 		return
 	}
@@ -163,7 +163,7 @@ type item struct {
 	value []rune
 }
 
-type itemType int
+type itemType int64
 
 const (
 	itemText         itemType = iota // alphanumeric
