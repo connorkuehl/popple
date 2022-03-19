@@ -2,18 +2,6 @@
 
 A karma bot for Discord.
 
-## Overview
-
-* [DEVELOPING.md](DEVELOPING.md) is an introduction to the Popple
-  architecture and hints on how to get started developing your feature
-  or bug-fix.
-
-* [MANUAL.md](MANUAL.md) is for learning how to deploy Popple.
-
-* Popple has some additional configuration options. Run `./popple -help`
-  for more info. These are optional, but could be helpful for adapting
-  Popple to better suit your needs.
-
 ## Building
 
 Clone or otherwise download the Popple source code and run:
@@ -37,7 +25,7 @@ $ chmod 0600 popple_token
 Then, once that one-time setup is complete:
 
 ```console
-$ ./popple -token /path/to/popple_token
+$ ./popple --token /path/to/popple_token --database /path/to/popple.sqlite
 ```
 
 ## Usage

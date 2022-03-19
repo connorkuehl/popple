@@ -1,140 +1,119 @@
 package popple
 
 import (
-	"bufio"
-	"database/sql"
 	"errors"
-	"io"
-	"strconv"
-	"strings"
 
-	"github.com/connorkuehl/popple/adapter"
-	"github.com/connorkuehl/popple/internal/karma"
-	"github.com/connorkuehl/popple/internal/popple"
+	"github.com/connorkuehl/popple/create"
+	poperr "github.com/connorkuehl/popple/errors"
+	"github.com/connorkuehl/popple/get"
+	"github.com/connorkuehl/popple/karma"
+	"github.com/connorkuehl/popple/remove"
+	"github.com/connorkuehl/popple/update"
 )
 
 var (
-	ErrInvalidLimit           = errors.New("limit must be positive non-zero integer")
-	ErrInvalidAnnounceSetting = errors.New("announce setting is invalid")
-	ErrMissingArgument        = errors.New("expected argument")
+	defaultLeaderboardSize uint = 10
 )
 
-var (
-	defaultLeaderboardSize = 10
-)
-
-type Popple struct {
-	pl adapter.PersistenceLayer
+type Repository interface {
+	create.ConfigRepository
+	create.EntityRepository
+	get.ConfigRepository
+	get.EntityRepository
+	remove.EntityRepository
+	update.ConfigRepository
+	update.EntityRepository
 }
 
-func New(pl adapter.PersistenceLayer) *Popple {
-	p := Popple{
-		pl: pl,
-	}
-
-	return &p
-}
-
-func (p *Popple) BumpKarma(serverID string, body io.Reader) (map[string]int, bool, error) {
-	cfgf := popple.GetConfig(p.pl, serverID)
-
-	var text strings.Builder
-	_, err := io.Copy(&text, body)
-	if err != nil {
-		return nil, false, err
-	}
-
-	bumps := karma.Parse(text.String())
-
-	newlvlsr := <-popple.AddKarmaToEntities(p.pl, serverID, bumps)
-	levels, err := newlvlsr.Levels, newlvlsr.Err
-	if err != nil {
-		return nil, false, err
-	}
-
-	cfgr := <-cfgf
-	cfg, err := cfgr.C, cfgr.Err
-	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			return nil, false, err
+func Announce(repo Repository, serverID string, on bool) error {
+	_, err := repo.Config(serverID)
+	if errors.Is(err, poperr.ErrNotFound) {
+		err = repo.CreateConfig(create.Config{ServerID: serverID})
+		if err != nil {
+			return err
 		}
-		err = nil
 	}
 
-	return levels, cfg.NoAnnounce, err
+	err = repo.UpdateConfig(update.Config{ServerID: serverID, NoAnnounce: !on})
+
+	return err
 }
 
-func (p *Popple) SetAnnounce(serverID string, body io.Reader) error {
-	scanner := bufio.NewScanner(body)
-	scanner.Split(bufio.ScanWords)
-	if ok := scanner.Scan(); !ok {
-		err := scanner.Err()
-		if err == nil {
-			return ErrMissingArgument
+func BumpKarma(repo Repository, serverID string, increments map[string]int64) (newKarmaLevels map[string]int64, err error) {
+	var needsCreate []create.Entity
+
+	// first, collect the current karma levels for the subjects whose karma is being bumped.
+	pre := make(map[string]int64)
+	for name, incr := range increments {
+		// skip net-zero increments, these are no-ops.
+		if incr == 0 {
+			continue
 		}
-		return err
+
+		entity, err := repo.Entity(serverID, name)
+		if errors.Is(err, poperr.ErrNotFound) {
+			needsCreate = append(needsCreate, create.Entity{ServerID: serverID, Name: name})
+			err = nil
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		// this relies on the fact that a zero-value entity is returned when repo.Entity
+		// returns an err if the entity is not found.
+		pre[name] = entity.Karma
 	}
 
-	setting := scanner.Text()
+	post := karma.Bump(pre, increments)
 
-	var on bool
-	switch setting {
-	case "on", "yes":
-		on = true
-	case "off", "no":
-		on = false
-	default:
-		return ErrInvalidAnnounceSetting
+	// TODO: consider roll-backs if creating or updating fails.
+
+	for _, create := range needsCreate {
+		err = repo.CreateEntity(create)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return <-popple.SetAnnounce(p.pl, serverID, on)
+	for name, karma := range post {
+		if karma == 0 {
+			// garbage collect the entity, there's no point in storing records with 0 karma.
+			err = repo.RemoveEntity(serverID, name)
+		} else {
+			err = repo.UpdateEntity(update.Entity{ServerID: serverID, Name: name, Karma: karma})
+		}
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return post, nil
 }
 
-func (p *Popple) Karma(serverID string, body io.Reader) (map[string]int, error) {
-	var text strings.Builder
+func Karma(repo get.EntityRepository, serverID string, who map[string]struct{}) (levels map[string]int64, err error) {
+	levels = make(map[string]int64)
+	for name := range who {
+		entity, err := repo.Entity(serverID, name)
+		if errors.Is(err, poperr.ErrNotFound) {
+			err = nil
+		}
+		if err != nil {
+			return nil, err
+		}
 
-	_, err := io.Copy(&text, body)
-	if err != nil {
-		return nil, err
-	}
-
-	who := karma.Parse(text.String())
-
-	levelsr := <-popple.GetLevels(p.pl, serverID, who)
-	levels, err := levelsr.Levels, levelsr.Err
-	if err != nil {
-		return nil, err
+		// entity should be zero-valued if it happened to be a NotFound err, so if
+		// the entity never existed then we'll still report 0 karma for that entity.
+		levels[name] = entity.Karma
 	}
 
 	return levels, nil
 }
 
-func (p *Popple) Leaderboard(serverID string, top bool, body io.Reader) ([]adapter.LeaderboardEntry, error) {
-	limit := defaultLeaderboardSize
+func Leaderboard(repo get.EntityRepository, serverID string, limit uint) (board []get.Entity, err error) {
+	return repo.Leaderboard(serverID, limit)
+}
 
-	scanner := bufio.NewScanner(body)
-	scanner.Split(bufio.ScanWords)
-	if ok := scanner.Scan(); !ok {
-		err := scanner.Err()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		parsedLimit, err := strconv.Atoi(scanner.Text())
-		if err != nil {
-			return nil, err
-		}
-		if parsedLimit < 1 {
-			return nil, ErrInvalidLimit
-		}
-		limit = parsedLimit
-	}
-
-	lbr := <-popple.GetLeaderboard(p.pl, serverID, top, uint(limit))
-	entries, err := lbr.Entries, lbr.Err
-	if err != nil {
-		return nil, err
-	}
-
-	return entries, nil
+func Loserboard(repo get.EntityRepository, serverID string, limit uint) (board []get.Entity, err error) {
+	return repo.Loserboard(serverID, limit)
 }
