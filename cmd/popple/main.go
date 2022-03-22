@@ -29,8 +29,8 @@ var (
 var (
 	levelsTemplate = template.Must(template.New("levels").Parse(`{{ range $name, $karma := . }}{{ $name }} has {{ $karma }} karma. {{ end }}`))
 	boardTemplate  = template.Must(template.New("board").Parse(
-		`{{ range $entry := . }}* {{ $entry.Name }} has {{ $entry.Karma }}.
-		{{ end }}`))
+		`{{ range $entry := . }}* {{ $entry.Name }} has {{ $entry.Karma }} karma.
+{{ end }}`))
 )
 
 func main() {
