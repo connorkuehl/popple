@@ -1,3 +1,4 @@
+// Package sqlite provides a repository backed by a SQLite database.
 package sqlite
 
 import (
