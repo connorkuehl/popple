@@ -1,3 +1,6 @@
+// Package null provides a "null" repository (a memory-backed, volatile repository.)
+//
+// This is primarily used for fast unit testing.
 package null
 
 import (
