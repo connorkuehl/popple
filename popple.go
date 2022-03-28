@@ -1,3 +1,4 @@
+// Package popple provides primitives for building a karma-counting bot.
 package popple
 
 import (
@@ -25,6 +26,10 @@ type Repository interface {
 	update.EntityRepository
 }
 
+// Announce configures a server's "announce" setting.
+//
+// The announce setting is whether or not the bot should emit the new karma
+// levels for whichever entities just had their karma levels bumped.
 func Announce(repo Repository, serverID string, on bool) error {
 	_, err := repo.Config(serverID)
 	if errors.Is(err, poperr.ErrNotFound) {
@@ -39,6 +44,8 @@ func Announce(repo Repository, serverID string, on bool) error {
 	return err
 }
 
+// BumpKarma modifies each entity's karma (the key in the 'increments' map) by
+// a relative amount (the value in the 'increments' map).
 func BumpKarma(repo Repository, serverID string, increments map[string]int64) (newKarmaLevels map[string]int64, err error) {
 	var needsCreate []create.Entity
 
@@ -91,6 +98,8 @@ func BumpKarma(repo Repository, serverID string, increments map[string]int64) (n
 	return post, nil
 }
 
+// Karma queries the karma levels for each of the entities (the keys in the 'who'
+// map.)
 func Karma(repo get.EntityRepository, serverID string, who map[string]struct{}) (levels map[string]int64, err error) {
 	levels = make(map[string]int64)
 	for name := range who {
@@ -110,10 +119,14 @@ func Karma(repo get.EntityRepository, serverID string, who map[string]struct{}) 
 	return levels, nil
 }
 
+// Leaderboard queries the entities with the highest karma levels (the number of
+// entities returned will not exceed 'limit.')
 func Leaderboard(repo get.EntityRepository, serverID string, limit uint) (board []get.Entity, err error) {
 	return repo.Leaderboard(serverID, limit)
 }
 
+// Loserboard queries the entities with the lowest karma levels (the number of
+// entities returned will not exceed 'limit.')
 func Loserboard(repo get.EntityRepository, serverID string, limit uint) (board []get.Entity, err error) {
 	return repo.Loserboard(serverID, limit)
 }
