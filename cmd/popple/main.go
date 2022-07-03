@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -17,13 +16,9 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/connorkuehl/popple"
+	"github.com/connorkuehl/popple/config"
 	poperr "github.com/connorkuehl/popple/errors"
 	sqlite_repo "github.com/connorkuehl/popple/repo/sqlite"
-)
-
-var (
-	database  = kingpin.Flag("database", "Path to the SQLite database.").Required().String()
-	tokenFile = kingpin.Flag("token", "Path to the Discord bot token file.").Required().ExistingFile()
 )
 
 var (
@@ -34,35 +29,58 @@ var (
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := configureAndRun(); err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func run() error {
+func configureAndRun() error {
+	var (
+		cfg        = config.Config{}
+		configFile = kingpin.Flag("config", "Path to the Popple config.").ExistingFile()
+	)
+
+	kingpin.Flag("database", "Path to the SQLite database.").ExistingFileVar(&cfg.DBPath)
+	kingpin.Flag("token", "Path to the Discord bot token file.").StringVar(&cfg.Token)
 	kingpin.Parse()
 
-	f, err := os.OpenFile(*tokenFile, os.O_CREATE|os.O_RDWR, 0o0644)
-	if err != nil {
-		return fmt.Errorf("failed to open token file: %w", err)
+	// Popple config path was specified in the command line arguments.
+	if *configFile != "" {
+		loaded, err := config.LoadFromFile(*configFile)
+		if err != nil {
+			return fmt.Errorf("failed to read popple config: %w", err)
+		}
+
+		// Merge the loaded config with the config that was already
+		// set via command line arguments, but the command line-supplied
+		// arguments taken precedent.
+		if cfg.Token == "" {
+			cfg.Token = loaded.Token
+		}
+		if cfg.DBPath == "" {
+			cfg.DBPath = loaded.DBPath
+		}
 	}
-	defer f.Close()
 
-	tokenScanner := bufio.NewScanner(f)
-	tokenScanner.Split(bufio.ScanLines)
-	if !tokenScanner.Scan() {
-		return fmt.Errorf("failed to read token from token file: %w", tokenScanner.Err())
+	// Make sure we have all the required config.
+	switch {
+	case cfg.Token == "":
+		return errors.New("token is missing from config")
+	case cfg.DBPath == "":
+		return errors.New("database path missing from config")
 	}
 
-	token := tokenScanner.Text()
+	return run(cfg)
+}
 
-	db, err := sql.Open("sqlite", *database)
+func run(cfg config.Config) error {
+	db, err := sql.Open("sqlite", cfg.DBPath)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer db.Close()
 
-	session, err := discordgo.New("Bot " + token)
+	session, err := discordgo.New("Bot " + cfg.Token)
 	if err != nil {
 		return err
 	}
