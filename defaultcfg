@@ -1,0 +1,2 @@
+token your-secret-token-goes-here
+database /var/lib/popple/db.sqlite
