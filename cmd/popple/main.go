@@ -18,7 +18,7 @@ import (
 	"github.com/connorkuehl/popple"
 	"github.com/connorkuehl/popple/config"
 	poperr "github.com/connorkuehl/popple/errors"
-	sqlite_repo "github.com/connorkuehl/popple/repo/sqlite"
+	sqliterepo "github.com/connorkuehl/popple/repo/sqlite"
 )
 
 var (
@@ -95,7 +95,7 @@ func run(cfg config.Config) error {
 	exiting := make(chan struct{})
 
 	repoMu := make(chan struct{}, 1)
-	repo, err := sqlite_repo.NewRepository(db)
+	repo, err := sqliterepo.NewRepository(db)
 	if err != nil {
 		return fmt.Errorf("failed to init repo: %w", err)
 	}
