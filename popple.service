@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/popple --config /etc/popple/popple
+ExecStart=/usr/bin/popple --config /etc/popple/config
 Restart=on-failure
 RestartSec=3
 
