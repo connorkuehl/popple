@@ -40,7 +40,7 @@ func configureAndRun() error {
 		configFile = kingpin.Flag("config", "Path to the Popple config.").ExistingFile()
 	)
 
-	kingpin.Flag("database", "Path to the SQLite database.").ExistingFileVar(&cfg.DBPath)
+	kingpin.Flag("database", "Path to the SQLite database.").StringVar(&cfg.DBPath)
 	kingpin.Flag("token", "Path to the Discord bot token file.").StringVar(&cfg.Token)
 	kingpin.Parse()
 
@@ -95,7 +95,10 @@ func run(cfg config.Config) error {
 	exiting := make(chan struct{})
 
 	repoMu := make(chan struct{}, 1)
-	repo := sqlite_repo.NewRepository(db)
+	repo, err := sqlite_repo.NewRepository(db)
+	if err != nil {
+		return fmt.Errorf("failed to init repo: %w", err)
+	}
 
 	mux := popple.NewMux("@" + session.State.User.Username)
 

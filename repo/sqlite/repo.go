@@ -4,6 +4,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"errors"
 
 	"github.com/connorkuehl/popple/create"
@@ -13,14 +14,21 @@ import (
 	"github.com/connorkuehl/popple/update"
 )
 
+//go:embed internal/sqlite/schema.sql
+var schema string
+
 type Repository struct {
 	db *sql.DB
 }
 
-func NewRepository(db *sql.DB) *Repository {
+func NewRepository(db *sql.DB) (*Repository, error) {
+	if _, err := db.Exec(schema); err != nil {
+		return nil, err
+	}
+
 	return &Repository{
 		db: db,
-	}
+	}, nil
 }
 
 func (r *Repository) CreateEntity(entity create.Entity) error {
