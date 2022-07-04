@@ -130,24 +130,24 @@ func run(cfg config.Config) error {
 			if errors.Is(err, poperr.ErrMissingArgument) || errors.Is(err, poperr.ErrInvalidArgument) {
 				_, err = s.ChannelMessageSend(m.ChannelID, `Valid announce settings are: "on", "off", "yes", "no"`)
 				if err != nil {
-					log.Println("failed to send message: %w", err)
+					log.Println("failed to send message", err)
 				}
 				return
 			}
 			if err != nil {
-				log.Println("ParseAnnounceArgs: %w", err)
+				log.Println("ParseAnnounceArgs", err)
 				return
 			}
 
 			err = action(repo, m.GuildID, on)
 			if err != nil {
-				log.Println("AnnounceHandler: %w", err)
+				log.Println("AnnounceHandler", err)
 				return
 			}
 
 			err = s.MessageReactionAdd(m.ChannelID, m.ID, "✅")
 			if err != nil {
-				log.Println("failed to add reaction to message: %w", err)
+				log.Println("failed to add reaction to message", err)
 				return
 			}
 		case popple.BumpKarmaHandler:
@@ -155,7 +155,7 @@ func run(cfg config.Config) error {
 
 			levels, err := action(repo, m.GuildID, increments)
 			if err != nil {
-				log.Println("BumpKarmaHandler: %w", err)
+				log.Println("BumpKarmaHandler", err)
 				return
 			}
 
@@ -165,7 +165,7 @@ func run(cfg config.Config) error {
 			}
 
 			if err != nil {
-				log.Println("repo.Config: %w", err)
+				log.Println("repo.Config", err)
 				return
 			}
 
@@ -180,13 +180,13 @@ func run(cfg config.Config) error {
 			var r strings.Builder
 			err = levelsTemplate.Execute(&r, levels)
 			if err != nil {
-				log.Println("levelsTemplate.Execute: %w", err)
+				log.Println("levelsTemplate.Execute", err)
 				return
 			}
 
 			_, err = s.ChannelMessageSend(m.ChannelID, r.String())
 			if err != nil {
-				log.Println("failed to send message to channel: %w", err)
+				log.Println("failed to send message to channel", err)
 				return
 			}
 		case popple.KarmaHandler:
@@ -194,14 +194,14 @@ func run(cfg config.Config) error {
 			if err != nil {
 				err = s.MessageReactionAdd(m.ChannelID, m.ID, "❓")
 				if err != nil {
-					log.Println("failed to add reaction to message: %w", err)
+					log.Println("failed to add reaction to message", err)
 				}
 				return
 			}
 
 			levels, err := action(repo, m.GuildID, who)
 			if err != nil {
-				log.Println("KarmaHandler: %w", err)
+				log.Println("KarmaHandler", err)
 				return
 			}
 
@@ -212,13 +212,13 @@ func run(cfg config.Config) error {
 			var r strings.Builder
 			err = levelsTemplate.Execute(&r, levels)
 			if err != nil {
-				log.Println("levelsTemplate.Execute: %w", err)
+				log.Println("levelsTemplate.Execute", err)
 				return
 			}
 
 			_, err = s.ChannelMessageSend(m.ChannelID, r.String())
 			if err != nil {
-				log.Println("failed to send message to channel: %w", err)
+				log.Println("failed to send message to channel", err)
 				return
 			}
 		case popple.LeaderboardHandler:
@@ -226,14 +226,14 @@ func run(cfg config.Config) error {
 			if errors.Is(err, poperr.ErrInvalidArgument) {
 				_, err = s.ChannelMessageSend(m.ChannelID, "The number of entries to list must be a positive non-zero integer")
 				if err != nil {
-					log.Println("failed to send message to channel: %w", err)
+					log.Println("failed to send message to channel", err)
 					return
 				}
 			}
 
 			board, err := action(repo, m.GuildID, limit)
 			if err != nil {
-				log.Println("LeaderboardHandler: %w", err)
+				log.Println("LeaderboardHandler", err)
 				return
 			}
 
@@ -244,13 +244,13 @@ func run(cfg config.Config) error {
 			var r strings.Builder
 			err = boardTemplate.Execute(&r, board)
 			if err != nil {
-				log.Println("boardTemplate.Execute: %w", err)
+				log.Println("boardTemplate.Execute", err)
 				return
 			}
 
 			_, err = s.ChannelMessageSend(m.ChannelID, r.String())
 			if err != nil {
-				log.Println("failed to send message to channel: %w", err)
+				log.Println("failed to send message to channel", err)
 				return
 			}
 		case popple.LoserboardHandler:
@@ -258,14 +258,14 @@ func run(cfg config.Config) error {
 			if errors.Is(err, poperr.ErrInvalidArgument) {
 				_, err = s.ChannelMessageSend(m.ChannelID, "The number of entries to list must be a positive non-zero integer")
 				if err != nil {
-					log.Println("failed to send message to channel: %w", err)
+					log.Println("failed to send message to channel", err)
 					return
 				}
 			}
 
 			board, err := action(repo, m.GuildID, limit)
 			if err != nil {
-				log.Println("LoserboardHandler: %w", err)
+				log.Println("LoserboardHandler", err)
 				return
 			}
 
@@ -276,13 +276,13 @@ func run(cfg config.Config) error {
 			var r strings.Builder
 			err = boardTemplate.Execute(&r, board)
 			if err != nil {
-				log.Println("boardTemplate.Execute: %w", err)
+				log.Println("boardTemplate.Execute", err)
 				return
 			}
 
 			_, err = s.ChannelMessageSend(m.ChannelID, r.String())
 			if err != nil {
-				log.Println("failed to send message to channel: %w", err)
+				log.Println("failed to send message to channel", err)
 				return
 			}
 		}
