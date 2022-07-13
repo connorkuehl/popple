@@ -9,7 +9,8 @@ func TestLoadConfig(t *testing.T) {
 	t.Run("it loads a well-defined config", func(t *testing.T) {
 		config := `
 		token 1234
-		database /etc/popple/good-file`
+		database /etc/popple/good-file
+		http_health 0.0.0.0:1234`
 
 		got, err := Load(strings.NewReader(config))
 		if err != nil {
@@ -17,8 +18,9 @@ func TestLoadConfig(t *testing.T) {
 		}
 
 		want := Config{
-			Token:  "1234",
-			DBPath: "/etc/popple/good-file",
+			Token:      "1234",
+			DBPath:     "/etc/popple/good-file",
+			HTTPHealth: "0.0.0.0:1234",
 		}
 
 		if got != want {

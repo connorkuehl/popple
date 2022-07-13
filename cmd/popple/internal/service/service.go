@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/connorkuehl/popple"
 	poperr "github.com/connorkuehl/popple/errors"
@@ -29,7 +30,13 @@ type ResponseWriter interface {
 	SendMessage(msg string) error
 }
 
+type Healther interface {
+	Health() (details map[string]interface{}, ok bool)
+}
+
 type Service interface {
+	Healther
+
 	Announce(req Request, rsp ResponseWriter) error
 	BumpKarma(req Request, rsp ResponseWriter) error
 	Karma(req Request, rsp ResponseWriter) error
@@ -37,16 +44,40 @@ type Service interface {
 	Loserboard(req Request, rsp ResponseWriter) error
 }
 
+type Discord interface {
+	LastHeartbeatAck() time.Time
+	LastHeartbeatSent() time.Time
+}
+
 type service struct {
 	mu sync.Mutex
 
+	disc Discord
 	repo popple.Repository
 }
 
-func New(repo popple.Repository) Service {
+func New(repo popple.Repository, disc Discord) Service {
 	return &service{
 		repo: repo,
+		disc: disc,
 	}
+}
+
+func (s *service) Health() (details map[string]interface{}, ok bool) {
+	ack := s.disc.LastHeartbeatAck()
+	ok = time.Now().UTC().Sub(ack) < 10*time.Second
+
+	details = map[string]interface{}{
+		"discord_connection": "connected",
+		"discord_last_ack":   ack,
+		"discord_last_sent":  s.disc.LastHeartbeatSent(),
+	}
+
+	if !ok {
+		details["discord_connection"] = "degraded or lost"
+	}
+
+	return details, ok
 }
 
 func (s *service) Announce(req Request, rsp ResponseWriter) error {

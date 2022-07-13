@@ -12,6 +12,10 @@ func NewLogged(svc Service) *loggedService {
 	return &loggedService{svc: svc}
 }
 
+func (s *loggedService) Health() (details map[string]interface{}, ok bool) {
+	return s.svc.Health()
+}
+
 func (s *loggedService) Announce(req Request, rsp ResponseWriter) error {
 	err := s.svc.Announce(req, rsp)
 	if err != nil {

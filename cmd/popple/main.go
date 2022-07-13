@@ -2,13 +2,16 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -33,6 +36,22 @@ func (r responseWriter) React(emoji string) error {
 func (r responseWriter) SendMessage(msg string) error {
 	_, err := r.s.ChannelMessageSend(r.m.ChannelID, msg)
 	return err
+}
+
+type discord struct {
+	s *discordgo.Session
+}
+
+func (d discord) LastHeartbeatAck() time.Time {
+	d.s.RLock()
+	defer d.s.RUnlock()
+	return d.s.LastHeartbeatAck
+}
+
+func (d discord) LastHeartbeatSent() time.Time {
+	d.s.RLock()
+	defer d.s.RUnlock()
+	return d.s.LastHeartbeatSent
 }
 
 func main() {
@@ -67,6 +86,8 @@ func configureAndRun() error {
 		if cfg.DBPath == "" {
 			cfg.DBPath = loaded.DBPath
 		}
+
+		cfg.HTTPHealth = loaded.HTTPHealth
 	}
 
 	// Make sure we have all the required config.
@@ -106,11 +127,27 @@ func run(cfg config.Config) error {
 		return fmt.Errorf("failed to init repo: %w", err)
 	}
 
-	var svc service.Service = service.New(repo)
+	disc := discord{session}
+
+	var svc service.Service = service.New(repo, disc)
 	svc = service.NewLogged(svc)
 
-	mux := popple.NewMux("@" + session.State.User.Username)
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		details, ok := svc.Health()
+		if !ok {
+			w.WriteHeader(500)
+		}
 
+		if err := json.NewEncoder(w).Encode(details); err != nil {
+			log.Printf("failed to encode health checks: %v", err)
+		}
+	})
+	go func() {
+		log.Println("health checks:", cfg.HTTPHealth+"/health")
+		log.Println(http.ListenAndServe(cfg.HTTPHealth, nil))
+	}()
+
+	mux := popple.NewMux("@" + session.State.User.Username)
 	detachMessageCreateHandler := session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		select {
 		case <-exiting:

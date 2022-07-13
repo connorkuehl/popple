@@ -34,8 +34,9 @@ func (e ErrMissingValue) Error() string {
 
 // Config holds the program's configuration.
 type Config struct {
-	Token  string
-	DBPath string
+	Token      string
+	DBPath     string
+	HTTPHealth string
 }
 
 // Load extracts the config key, value pairs from the given reader.
@@ -74,6 +75,8 @@ func Load(r io.Reader) (Config, error) {
 			config.Token = val
 		case "database":
 			config.DBPath = val
+		case "http_health":
+			config.HTTPHealth = val
 		default:
 			err := ErrUnknownKey{
 				Key:  key,
