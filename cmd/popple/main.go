@@ -9,24 +9,31 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"text/template"
 
 	"github.com/bwmarrin/discordgo"
 	"gopkg.in/alecthomas/kingpin.v2"
 	_ "modernc.org/sqlite"
 
 	"github.com/connorkuehl/popple"
+	"github.com/connorkuehl/popple/cmd/popple/internal/service"
 	"github.com/connorkuehl/popple/config"
-	poperr "github.com/connorkuehl/popple/errors"
 	sqliterepo "github.com/connorkuehl/popple/repo/sqlite"
 )
 
-var (
-	levelsTemplate = template.Must(template.New("levels").Parse(`{{ range $name, $karma := . }}{{ $name }} has {{ $karma }} karma. {{ end }}`))
-	boardTemplate  = template.Must(template.New("board").Parse(
-		`{{ range $entry := . }}* {{ $entry.Name }} has {{ $entry.Karma }} karma.
-{{ end }}`))
-)
+type responseWriter struct {
+	m *discordgo.Message
+	s *discordgo.Session
+}
+
+func (r responseWriter) React(emoji string) error {
+	err := r.s.MessageReactionAdd(r.m.ChannelID, r.m.ID, emoji)
+	return err
+}
+
+func (r responseWriter) SendMessage(msg string) error {
+	_, err := r.s.ChannelMessageSend(r.m.ChannelID, msg)
+	return err
+}
 
 func main() {
 	if err := configureAndRun(); err != nil {
@@ -94,11 +101,13 @@ func run(cfg config.Config) error {
 
 	exiting := make(chan struct{})
 
-	repoMu := make(chan struct{}, 1)
 	repo, err := sqliterepo.NewRepository(db)
 	if err != nil {
 		return fmt.Errorf("failed to init repo: %w", err)
 	}
+
+	var svc service.Service = service.New(repo)
+	svc = service.NewLogged(svc)
 
 	mux := popple.NewMux("@" + session.State.User.Username)
 
@@ -108,9 +117,6 @@ func run(cfg config.Config) error {
 			return
 		default:
 		}
-
-		repoMu <- struct{}{}
-		defer func() { <-repoMu }()
 
 		if s.State.User.ID == m.Author.ID {
 			return
@@ -123,168 +129,26 @@ func run(cfg config.Config) error {
 
 		message := strings.TrimSpace(m.ContentWithMentionsReplaced())
 		action, body := mux.Route(message)
+		request := service.Request{
+			ServerID: m.GuildID,
+			Message:  body,
+		}
+		response := responseWriter{
+			m: m.Message,
+			s: s,
+		}
 
-		switch action := action.(type) {
+		switch action.(type) {
 		case popple.AnnounceHandler:
-			on, err := popple.ParseAnnounceArgs(body)
-			if errors.Is(err, poperr.ErrMissingArgument) || errors.Is(err, poperr.ErrInvalidArgument) {
-				_, err = s.ChannelMessageSend(m.ChannelID, `Valid announce settings are: "on", "off", "yes", "no"`)
-				if err != nil {
-					log.Println("failed to send message", err)
-				}
-				return
-			}
-			if err != nil {
-				log.Println("ParseAnnounceArgs", err)
-				return
-			}
-
-			err = action(repo, m.GuildID, on)
-			if err != nil {
-				log.Println("AnnounceHandler", err)
-				return
-			}
-
-			err = s.MessageReactionAdd(m.ChannelID, m.ID, "✅")
-			if err != nil {
-				log.Println("failed to add reaction to message", err)
-				return
-			}
+			_ = svc.Announce(request, response)
 		case popple.BumpKarmaHandler:
-			increments, _ := popple.ParseBumpKarmaArgs(body)
-
-			levels, err := action(repo, m.GuildID, increments)
-			if err != nil {
-				log.Println("BumpKarmaHandler", err)
-				return
-			}
-
-			config, err := repo.Config(m.GuildID)
-			if errors.Is(err, poperr.ErrNotFound) {
-				err = nil
-			}
-
-			if err != nil {
-				log.Println("repo.Config", err)
-				return
-			}
-
-			if config.NoAnnounce {
-				return
-			}
-
-			if len(levels) < 1 {
-				return
-			}
-
-			var r strings.Builder
-			err = levelsTemplate.Execute(&r, levels)
-			if err != nil {
-				log.Println("levelsTemplate.Execute", err)
-				return
-			}
-
-			_, err = s.ChannelMessageSend(m.ChannelID, r.String())
-			if err != nil {
-				log.Println("failed to send message to channel", err)
-				return
-			}
+			_ = svc.BumpKarma(request, response)
 		case popple.KarmaHandler:
-			who, err := popple.ParseKarmaArgs(body)
-			if err != nil {
-				err = s.MessageReactionAdd(m.ChannelID, m.ID, "❓")
-				if err != nil {
-					log.Println("failed to add reaction to message", err)
-				}
-				return
-			}
-
-			levels, err := action(repo, m.GuildID, who)
-			if err != nil {
-				log.Println("KarmaHandler", err)
-				return
-			}
-
-			if len(levels) < 1 {
-				return
-			}
-
-			var r strings.Builder
-			err = levelsTemplate.Execute(&r, levels)
-			if err != nil {
-				log.Println("levelsTemplate.Execute", err)
-				return
-			}
-
-			_, err = s.ChannelMessageSend(m.ChannelID, r.String())
-			if err != nil {
-				log.Println("failed to send message to channel", err)
-				return
-			}
+			_ = svc.Karma(request, response)
 		case popple.LeaderboardHandler:
-			limit, err := popple.ParseLeaderboardArgs(body)
-			if errors.Is(err, poperr.ErrInvalidArgument) {
-				_, err = s.ChannelMessageSend(m.ChannelID, "The number of entries to list must be a positive non-zero integer")
-				if err != nil {
-					log.Println("failed to send message to channel", err)
-					return
-				}
-			}
-
-			board, err := action(repo, m.GuildID, limit)
-			if err != nil {
-				log.Println("LeaderboardHandler", err)
-				return
-			}
-
-			if len(board) < 1 {
-				return
-			}
-
-			var r strings.Builder
-			err = boardTemplate.Execute(&r, board)
-			if err != nil {
-				log.Println("boardTemplate.Execute", err)
-				return
-			}
-
-			_, err = s.ChannelMessageSend(m.ChannelID, r.String())
-			if err != nil {
-				log.Println("failed to send message to channel", err)
-				return
-			}
+			_ = svc.Leaderboard(request, response)
 		case popple.LoserboardHandler:
-			limit, err := popple.ParseLoserboardArgs(body)
-			if errors.Is(err, poperr.ErrInvalidArgument) {
-				_, err = s.ChannelMessageSend(m.ChannelID, "The number of entries to list must be a positive non-zero integer")
-				if err != nil {
-					log.Println("failed to send message to channel", err)
-					return
-				}
-			}
-
-			board, err := action(repo, m.GuildID, limit)
-			if err != nil {
-				log.Println("LoserboardHandler", err)
-				return
-			}
-
-			if len(board) < 1 {
-				return
-			}
-
-			var r strings.Builder
-			err = boardTemplate.Execute(&r, board)
-			if err != nil {
-				log.Println("boardTemplate.Execute", err)
-				return
-			}
-
-			_, err = s.ChannelMessageSend(m.ChannelID, r.String())
-			if err != nil {
-				log.Println("failed to send message to channel", err)
-				return
-			}
+			_ = svc.Loserboard(request, response)
 		}
 	})
 	defer detachMessageCreateHandler()
