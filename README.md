@@ -17,15 +17,10 @@ The `go` toolchain should download the dependencies and build Popple.
 Popple requires a valid Discord bot token in order to interact with the
 Discord API.
 
-```console
-$ echo -n "my super secret token" > popple_token
-$ chmod 0600 popple_token
-```
-
 Then, once that one-time setup is complete:
 
 ```console
-$ ./popple --token /path/to/popple_token --database /path/to/popple.sqlite
+$ ./popple --token <YOUR_SUPER_SECRET_BOT_TOKEN> --database /path/to/popple.sqlite
 ```
 
 ## Usage
