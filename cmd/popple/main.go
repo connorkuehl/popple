@@ -59,7 +59,7 @@ func configureAndRun() error {
 	)
 
 	kingpin.Flag("database", "Path to the SQLite database.").StringVar(&cfg.DBPath)
-	kingpin.Flag("token", "Path to the Discord bot token file.").StringVar(&cfg.Token)
+	kingpin.Flag("token", "Discord bot API token.").StringVar(&cfg.Token)
 	kingpin.Parse()
 
 	// Popple config path was specified in the command line arguments.
