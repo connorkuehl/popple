@@ -42,16 +42,8 @@ type discord struct {
 	s *discordgo.Session
 }
 
-func (d discord) LastHeartbeatAck() time.Time {
-	d.s.RLock()
-	defer d.s.RUnlock()
-	return d.s.LastHeartbeatAck
-}
-
-func (d discord) LastHeartbeatSent() time.Time {
-	d.s.RLock()
-	defer d.s.RUnlock()
-	return d.s.LastHeartbeatSent
+func (d discord) HeartbeatLatency() time.Duration {
+	return d.s.HeartbeatLatency()
 }
 
 func main() {

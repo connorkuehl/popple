@@ -45,8 +45,7 @@ type Service interface {
 }
 
 type Discord interface {
-	LastHeartbeatAck() time.Time
-	LastHeartbeatSent() time.Time
+	HeartbeatLatency() time.Duration
 }
 
 type service struct {
@@ -64,13 +63,12 @@ func New(repo popple.Repository, disc Discord) Service {
 }
 
 func (s *service) Health() (details map[string]interface{}, ok bool) {
-	ack := s.disc.LastHeartbeatAck()
-	ok = time.Now().UTC().Sub(ack) < 10*time.Second
+	discordLatency := s.disc.HeartbeatLatency()
+	ok = discordLatency < 400*time.Millisecond
 
 	details = map[string]interface{}{
-		"discord_connection": "connected",
-		"discord_last_ack":   ack,
-		"discord_last_sent":  s.disc.LastHeartbeatSent(),
+		"discord_connection":        "connected",
+		"discord_heartbeat_latency": fmt.Sprintf("%d ms", discordLatency.Milliseconds()),
 	}
 
 	if !ok {
