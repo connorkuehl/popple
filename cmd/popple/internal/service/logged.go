@@ -1,7 +1,9 @@
 package service
 
 import (
+	"encoding/json"
 	"log"
+	"strings"
 )
 
 type loggedService struct {
@@ -13,7 +15,23 @@ func NewLogged(svc Service) *loggedService {
 }
 
 func (s *loggedService) Health() (details map[string]interface{}, ok bool) {
-	return s.svc.Health()
+	details, ok = s.svc.Health()
+
+	report := struct {
+		OK      bool                   `json:"ok"`
+		Details map[string]interface{} `json:"details"`
+	}{
+		OK:      ok,
+		Details: details,
+	}
+
+	if !ok {
+		var sb strings.Builder
+		json.NewEncoder(&sb).Encode(report)
+		log.Println("health check failed", sb.String())
+	}
+
+	return details, ok
 }
 
 func (s *loggedService) Announce(req Request, rsp ResponseWriter) error {
