@@ -27,7 +27,7 @@ func (s *loggedService) Health() (details map[string]interface{}, ok bool) {
 
 	if !ok {
 		var sb strings.Builder
-		json.NewEncoder(&sb).Encode(report)
+		_ = json.NewEncoder(&sb).Encode(report)
 		log.Println("health check failed", sb.String())
 	}
 
