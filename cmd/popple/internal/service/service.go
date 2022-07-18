@@ -64,7 +64,7 @@ func New(repo popple.Repository, disc Discord) Service {
 
 func (s *service) Health() (details map[string]interface{}, ok bool) {
 	discordLatency := s.disc.HeartbeatLatency()
-	ok = discordLatency < 400*time.Millisecond
+	ok = discordLatency < 10*time.Second
 
 	details = map[string]interface{}{
 		"discord_connection":        "connected",
