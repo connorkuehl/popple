@@ -126,9 +126,7 @@ func run(cfg config.Config) error {
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		details, ok := svc.Health()
-		if !ok {
-			w.WriteHeader(500)
-		}
+		details["healthy"] = ok
 
 		if err := json.NewEncoder(w).Encode(details); err != nil {
 			log.Printf("failed to encode health checks: %v", err)
