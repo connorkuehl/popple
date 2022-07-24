@@ -1,3 +1,0 @@
-token your-secret-token-goes-here
-database /var/lib/popple/db.sqlite
-bind_health 0.0.0.0:8000

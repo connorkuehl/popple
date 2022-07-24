@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,13 +13,17 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"gopkg.in/alecthomas/kingpin.v2"
 	_ "modernc.org/sqlite"
 
 	"github.com/connorkuehl/popple"
 	"github.com/connorkuehl/popple/cmd/popple/internal/service"
-	"github.com/connorkuehl/popple/config"
 	sqliterepo "github.com/connorkuehl/popple/repo/sqlite"
+)
+
+var (
+	sqlitedb     = os.Getenv("POPPLE_SQLITE_DB")
+	token        = os.Getenv("POPPLE_DISCORD_BOT_TOKEN")
+	listenHealth = os.Getenv("POPPLE_LISTEN_HEALTH")
 )
 
 type responseWriter struct {
@@ -47,60 +50,19 @@ func (d discord) HeartbeatLatency() time.Duration {
 }
 
 func main() {
-	if err := configureAndRun(); err != nil {
+	if err := run(); err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func configureAndRun() error {
-	var (
-		cfg        = config.Config{}
-		configFile = kingpin.Flag("config", "Path to the Popple config.").ExistingFile()
-	)
-
-	kingpin.Flag("database", "Path to the SQLite database.").StringVar(&cfg.DBPath)
-	kingpin.Flag("token", "Discord bot API token.").StringVar(&cfg.Token)
-	kingpin.Parse()
-
-	// Popple config path was specified in the command line arguments.
-	if *configFile != "" {
-		loaded, err := config.LoadFromFile(*configFile)
-		if err != nil {
-			return fmt.Errorf("failed to read popple config: %w", err)
-		}
-
-		// Merge the loaded config with the config that was already
-		// set via command line arguments, but the command line-supplied
-		// arguments taken precedent.
-		if cfg.Token == "" {
-			cfg.Token = loaded.Token
-		}
-		if cfg.DBPath == "" {
-			cfg.DBPath = loaded.DBPath
-		}
-
-		cfg.HTTPHealth = loaded.HTTPHealth
-	}
-
-	// Make sure we have all the required config.
-	switch {
-	case cfg.Token == "":
-		return errors.New("token is missing from config")
-	case cfg.DBPath == "":
-		return errors.New("database path missing from config")
-	}
-
-	return run(cfg)
-}
-
-func run(cfg config.Config) error {
-	db, err := sql.Open("sqlite", cfg.DBPath)
+func run() error {
+	db, err := sql.Open("sqlite", sqlitedb)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer db.Close()
 
-	session, err := discordgo.New("Bot " + cfg.Token)
+	session, err := discordgo.New("Bot " + token)
 	if err != nil {
 		return err
 	}
@@ -133,8 +95,8 @@ func run(cfg config.Config) error {
 		}
 	})
 	go func() {
-		log.Println("health checks:", cfg.HTTPHealth+"/health")
-		log.Println(http.ListenAndServe(cfg.HTTPHealth, nil))
+		log.Println("health checks:", listenHealth+"/health")
+		log.Println(http.ListenAndServe(listenHealth, nil))
 	}()
 
 	mux := popple.NewMux("@" + session.State.User.Username)
