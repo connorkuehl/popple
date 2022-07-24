@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/connorkuehl/popple"
 	poperr "github.com/connorkuehl/popple/errors"
@@ -43,36 +42,18 @@ type Service interface {
 	Loserboard(req Request, rsp ResponseWriter) error
 }
 
-type Discord interface {
-	HeartbeatLatency() time.Duration
-}
-
 type service struct {
-	disc Discord
 	repo popple.Repository
 }
 
-func New(repo popple.Repository, disc Discord) Service {
+func New(repo popple.Repository) Service {
 	return &service{
 		repo: repo,
-		disc: disc,
 	}
 }
 
 func (s *service) Health() (details map[string]interface{}, ok bool) {
-	discordLatency := s.disc.HeartbeatLatency()
-	ok = discordLatency < 10*time.Second
-
-	details = map[string]interface{}{
-		"discord_connection":        "connected",
-		"discord_heartbeat_latency": fmt.Sprintf("%d ms", discordLatency.Milliseconds()),
-	}
-
-	if !ok {
-		details["discord_connection"] = "degraded or lost"
-	}
-
-	return details, ok
+	return map[string]interface{}{}, true
 }
 
 func (s *service) Announce(req Request, rsp ResponseWriter) error {

@@ -1,0 +1,11 @@
+FROM golang:1.18.0-alpine AS build
+RUN apk add git
+RUN mkdir /builddir
+ADD . /builddir
+WORKDIR /builddir
+RUN go build ./cmd/popplebot
+
+FROM alpine:latest
+COPY --from=build /builddir/popplebot /usr/local/bin/popplebot
+
+ENTRYPOINT ["/usr/local/bin/popplebot"]

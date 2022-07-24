@@ -1,27 +1,27 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
-	"syscall"
-	"time"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/go-sql-driver/mysql"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/connorkuehl/popple"
 	"github.com/connorkuehl/popple/cmd/popple/internal/service"
+	poperrs "github.com/connorkuehl/popple/errors"
+	"github.com/connorkuehl/popple/event"
 	mysqlrepo "github.com/connorkuehl/popple/repo/mysql"
 )
 
 var (
-	token        = os.Getenv("POPPLE_DISCORD_BOT_TOKEN")
 	listenHealth = os.Getenv("POPPLE_LISTEN_HEALTH")
 
 	dbHost = os.Getenv("POPPLE_DB_HOST")
@@ -29,38 +29,23 @@ var (
 	dbUser = os.Getenv("POPPLE_DB_USER")
 	dbPass = os.Getenv("POPPLE_DB_PASS")
 	dbName = os.Getenv("POPPLE_DB_NAME")
+
+	amqpHost = os.Getenv("POPPLE_AMQP_HOST")
+	amqpPort = os.Getenv("POPPLE_AMQP_PORT")
+	amqpUser = os.Getenv("POPPLE_AMQP_USER")
+	amqpPass = os.Getenv("POPPLE_AMQP_PASS")
 )
 
-type responseWriter struct {
-	m *discordgo.Message
-	s *discordgo.Session
-}
-
-func (r responseWriter) React(emoji string) error {
-	err := r.s.MessageReactionAdd(r.m.ChannelID, r.m.ID, emoji)
-	return err
-}
-
-func (r responseWriter) SendMessage(msg string) error {
-	_, err := r.s.ChannelMessageSend(r.m.ChannelID, msg)
-	return err
-}
-
-type discord struct {
-	s *discordgo.Session
-}
-
-func (d discord) HeartbeatLatency() time.Duration {
-	return d.s.HeartbeatLatency()
-}
-
 func main() {
-	if err := run(); err != nil {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	if err := run(ctx); err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func run() error {
+func run(ctx context.Context) error {
 	dbcfg := mysql.Config{
 		User:      dbUser,
 		Passwd:    dbPass,
@@ -75,24 +60,59 @@ func run() error {
 	}
 	defer db.Close()
 
-	session, err := discordgo.New("Bot " + token)
+	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s", amqpUser, amqpPass, amqpHost, amqpPort))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return err
+	}
+	defer ch.Close()
+
+	err = ch.ExchangeDeclare(
+		"popple_topic",
+		"topic",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
 	if err != nil {
 		return err
 	}
 
-	err = session.Open()
+	requestQueue, err := ch.QueueDeclare(
+		"requests",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
 	if err != nil {
 		return err
 	}
-	defer session.Close()
-	log.Println("connected to discord")
 
-	exiting := make(chan struct{})
+	requests, err := ch.Consume(
+		requestQueue.Name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
 
 	repo := mysqlrepo.New(db)
-	disc := discord{session}
 
-	var svc service.Service = service.New(repo, disc)
+	var svc service.Service = service.New(repo)
 	svc = service.NewLogged(svc)
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -108,57 +128,210 @@ func run() error {
 		log.Println(http.ListenAndServe(listenHealth, nil))
 	}()
 
-	mux := popple.NewMux("@" + session.State.User.Username)
-	detachMessageCreateHandler := session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		select {
-		case <-exiting:
-			return
-		default:
-		}
-
-		if s.State.User.ID == m.Author.ID {
-			return
-		}
-
-		isDM := len(m.GuildID) == 0
-		if isDM {
-			return
-		}
-
-		message := strings.TrimSpace(m.ContentWithMentionsReplaced())
-		action, body := mux.Route(message)
-		request := service.Request{
-			ServerID: m.GuildID,
-			Message:  body,
-		}
-		response := responseWriter{
-			m: m.Message,
-			s: s,
-		}
-
-		switch action.(type) {
-		case popple.AnnounceHandler:
-			_ = svc.Announce(request, response)
-		case popple.BumpKarmaHandler:
-			_ = svc.BumpKarma(request, response)
-		case popple.KarmaHandler:
-			_ = svc.Karma(request, response)
-		case popple.LeaderboardHandler:
-			_ = svc.Leaderboard(request, response)
-		case popple.LoserboardHandler:
-			_ = svc.Loserboard(request, response)
-		}
-	})
-	defer detachMessageCreateHandler()
 	log.Println("ready to dole out some karma")
 
-	plsStop := make(chan os.Signal, 1)
-	signal.Notify(plsStop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	<-plsStop
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case req, ok := <-requests:
+			if !ok {
+				return errors.New("consumer has seen a closed requests channel")
+			}
 
-	log.Println("shutting down due to signal")
+			var evt event.Event
+			err := json.Unmarshal(req.Body, &evt)
+			if err != nil {
+				log.Println("failed to deserialize event:", err)
+				continue
+			}
 
-	close(exiting)
+			eventJSON, _ := json.Marshal(evt)
+			log.Println("got event", string(eventJSON))
 
-	return nil
+			switch {
+			case evt.RequestChangeAnnounce != nil:
+				req := evt.RequestChangeAnnounce
+				err := popple.Announce(repo, req.ServerID, !req.NoAnnounce)
+				if err != nil {
+					log.Println("request failed", req, "error:", err)
+					continue
+				}
+
+				payload, err := json.Marshal(event.Event{
+					ChangedAnnounce: &event.ChangedAnnounce{
+						ReactTo: req.ReactTo,
+					},
+				})
+				if err != nil {
+					log.Println("failed to encode:", err)
+					continue
+				}
+				err = ch.PublishWithContext(
+					context.TODO(),
+					"popple_topic",
+					"changed.announce",
+					false,
+					false,
+					amqp.Publishing{
+						Body: payload,
+					},
+				)
+				if err != nil {
+					log.Println("failed to publish:", err)
+					continue
+				}
+			case evt.RequestBumpKarma != nil:
+				req := evt.RequestBumpKarma
+				incr, err := popple.BumpKarma(repo, req.ServerID, req.Who)
+				if err != nil {
+					log.Println("request failed", req, "error:", err)
+					continue
+				}
+
+				cfg, err := repo.Config(req.ServerID)
+				if errors.Is(err, poperrs.ErrNotFound) {
+					err = nil
+				}
+				if err != nil {
+					log.Println("failed to check config:", err)
+					continue
+				}
+
+				payload, err := json.Marshal(event.Event{
+					ChangedKarma: &event.ChangedKarma{
+						ReplyTo:  req.ReplyTo,
+						Who:      incr,
+						Announce: !cfg.NoAnnounce,
+					},
+				})
+				if err != nil {
+					log.Println("failed to encode:", err)
+					continue
+				}
+				err = ch.PublishWithContext(
+					context.TODO(),
+					"popple_topic",
+					"changed.karma",
+					false,
+					false,
+					amqp.Publishing{
+						Body: payload,
+					},
+				)
+				if err != nil {
+					log.Println("failed to publish:", err)
+					continue
+				}
+			case evt.RequestCheckKarma != nil:
+				req := evt.RequestCheckKarma
+				who, err := popple.Karma(repo, req.ServerID, req.Who)
+				if err != nil {
+					log.Println("request failed", req, "error:", err)
+					continue
+				}
+
+				payload, err := json.Marshal(event.Event{
+					CheckedKarma: &event.CheckedKarma{
+						ReplyTo: req.ReplyTo,
+						Who:     who,
+					},
+				})
+				if err != nil {
+					log.Println("failed to encode:", err)
+					continue
+				}
+				err = ch.PublishWithContext(
+					context.TODO(),
+					"popple_topic",
+					"checked.karma",
+					false,
+					false,
+					amqp.Publishing{
+						Body: payload,
+					},
+				)
+				if err != nil {
+					log.Println("failed to publish:", err)
+					continue
+				}
+			case evt.RequestCheckLeaderboard != nil:
+				req := evt.RequestCheckLeaderboard
+				top, err := popple.Leaderboard(repo, req.ServerID, req.Limit)
+				if err != nil {
+					log.Println("request failed", req, "error:", err)
+					continue
+				}
+
+				board := make([]event.Score, 0, len(top))
+				for _, s := range top {
+					board = append(board, event.Score{Name: s.Name, Karma: s.Karma})
+				}
+
+				payload, err := json.Marshal(event.Event{
+					CheckedLeaderboard: &event.CheckedLeaderboard{
+						ReplyTo: req.ReplyTo,
+						Board:   board,
+					},
+				})
+				if err != nil {
+					log.Println("failed to encode:", err)
+					continue
+				}
+				err = ch.PublishWithContext(
+					context.TODO(),
+					"popple_topic",
+					"checked.karma",
+					false,
+					false,
+					amqp.Publishing{
+						Body: payload,
+					},
+				)
+				if err != nil {
+					log.Println("failed to publish:", err)
+					continue
+				}
+			case evt.RequestCheckLoserboard != nil:
+				req := evt.RequestCheckLoserboard
+				top, err := popple.Loserboard(repo, req.ServerID, req.Limit)
+				if err != nil {
+					log.Println("request failed", req, "error:", err)
+					continue
+				}
+
+				board := make([]event.Score, 0, len(top))
+				for _, s := range top {
+					board = append(board, event.Score{Name: s.Name, Karma: s.Karma})
+				}
+
+				payload, err := json.Marshal(event.Event{
+					CheckedLoserboard: &event.CheckedLoserboard{
+						ReplyTo: req.ReplyTo,
+						Board:   board,
+					},
+				})
+				if err != nil {
+					log.Println("failed to encode:", err)
+					continue
+				}
+				err = ch.PublishWithContext(
+					context.TODO(),
+					"popple_topic",
+					"checked.karma",
+					false,
+					false,
+					amqp.Publishing{
+						Body: payload,
+					},
+				)
+				if err != nil {
+					log.Println("failed to publish:", err)
+					continue
+				}
+			default:
+				log.Println("received unknown request", evt)
+			}
+		}
+	}
 }
