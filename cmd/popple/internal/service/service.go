@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
 
@@ -49,8 +48,6 @@ type Discord interface {
 }
 
 type service struct {
-	mu sync.Mutex
-
 	disc Discord
 	repo popple.Repository
 }
@@ -79,9 +76,6 @@ func (s *service) Health() (details map[string]interface{}, ok bool) {
 }
 
 func (s *service) Announce(req Request, rsp ResponseWriter) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	on, err := popple.ParseAnnounceArgs(req.Message)
 	if errors.Is(err, poperr.ErrMissingArgument) || errors.Is(err, poperr.ErrInvalidArgument) {
 		err = rsp.SendMessage(`Valid announce settings are: "on", "off", "yes", "no"`)
@@ -105,9 +99,6 @@ func (s *service) Announce(req Request, rsp ResponseWriter) error {
 }
 
 func (s *service) BumpKarma(req Request, rsp ResponseWriter) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	increments, _ := popple.ParseBumpKarmaArgs(req.Message)
 
 	levels, err := popple.BumpKarma(s.repo, req.ServerID, increments)
@@ -146,9 +137,6 @@ func (s *service) BumpKarma(req Request, rsp ResponseWriter) error {
 }
 
 func (s *service) Karma(req Request, rsp ResponseWriter) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	who, err := popple.ParseKarmaArgs(req.Message)
 	if err != nil {
 		err = rsp.React("❓")
@@ -192,9 +180,6 @@ func (s *service) Loserboard(req Request, rsp ResponseWriter) error {
 }
 
 func (s *service) board(req Request, rsp ResponseWriter, ordering boardOrdering) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	limit, err := popple.ParseLeaderboardArgs(req.Message)
 	if errors.Is(err, poperr.ErrInvalidArgument) {
 		err = rsp.SendMessage("The number of entries to list must be a positive non-zero integer")
