@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/connorkuehl/popple"
 	poperr "github.com/connorkuehl/popple/errors"
 	poppleget "github.com/connorkuehl/popple/get"
-	"text/template"
 )
 
 var (
