@@ -91,7 +91,7 @@ func (s *service) Announce(req Request, rsp ResponseWriter) error {
 		return nil
 	}
 
-	err = popple.Announce(s.repo, req.Message, on)
+	err = popple.Announce(s.repo, req.ServerID, on)
 	if err != nil {
 		return fmt.Errorf("failed to set announce: %w", err)
 	}
