@@ -1,6 +1,0 @@
-version: 1
-packages:
-  - path: "repo/sqlite/internal/sqlite"
-    name: "sqlite"
-    schema: "repo/sqlite/internal/sqlite/schema.sql"
-    queries: "repo/sqlite/internal/sqlite/queries.sql"

@@ -13,17 +13,22 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	_ "modernc.org/sqlite"
+	"github.com/go-sql-driver/mysql"
 
 	"github.com/connorkuehl/popple"
 	"github.com/connorkuehl/popple/cmd/popple/internal/service"
-	sqliterepo "github.com/connorkuehl/popple/repo/sqlite"
+	mysqlrepo "github.com/connorkuehl/popple/repo/mysql"
 )
 
 var (
-	sqlitedb     = os.Getenv("POPPLE_SQLITE_DB")
 	token        = os.Getenv("POPPLE_DISCORD_BOT_TOKEN")
 	listenHealth = os.Getenv("POPPLE_LISTEN_HEALTH")
+
+	dbHost = os.Getenv("POPPLE_DB_HOST")
+	dbPort = os.Getenv("POPPLE_DB_PORT")
+	dbUser = os.Getenv("POPPLE_DB_USER")
+	dbPass = os.Getenv("POPPLE_DB_PASS")
+	dbName = os.Getenv("POPPLE_DB_NAME")
 )
 
 type responseWriter struct {
@@ -56,7 +61,15 @@ func main() {
 }
 
 func run() error {
-	db, err := sql.Open("sqlite", sqlitedb)
+	dbcfg := mysql.Config{
+		User:      dbUser,
+		Passwd:    dbPass,
+		Net:       "tcp",
+		Addr:      fmt.Sprintf("%s:%s", dbHost, dbPort),
+		DBName:    dbName,
+		ParseTime: true,
+	}
+	db, err := sql.Open("mysql", dbcfg.FormatDSN())
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
@@ -76,11 +89,7 @@ func run() error {
 
 	exiting := make(chan struct{})
 
-	repo, err := sqliterepo.NewRepository(db)
-	if err != nil {
-		return fmt.Errorf("failed to init repo: %w", err)
-	}
-
+	repo := mysqlrepo.New(db)
 	disc := discord{session}
 
 	var svc service.Service = service.New(repo, disc)
