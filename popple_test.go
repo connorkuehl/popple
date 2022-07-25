@@ -7,7 +7,7 @@ import (
 
 	"github.com/connorkuehl/popple"
 	poperr "github.com/connorkuehl/popple/errors"
-	"github.com/connorkuehl/popple/repo/null"
+	"github.com/connorkuehl/popple/internal/repo/null"
 )
 
 func TestAnnounce(t *testing.T) {
