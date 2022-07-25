@@ -151,7 +151,13 @@ func run(ctx context.Context) error {
 	return nil
 }
 
-func publisher(ctx context.Context, wg *sync.WaitGroup, ch *amqp.Channel, qu amqp.Queue, session *discordgo.Session) {
+func publisher(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	ch *amqp.Channel,
+	qu amqp.Queue,
+	session *discordgo.Session,
+) {
 	defer wg.Done()
 	defer log.Println("publisher has stopped")
 
@@ -319,7 +325,12 @@ func publishRequest(ctx context.Context, ch *amqp.Channel, qu amqp.Queue, req *e
 	)
 }
 
-func consumer(ctx context.Context, wg *sync.WaitGroup, events <-chan amqp.Delivery, session *discordgo.Session) {
+func consumer(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	events <-chan amqp.Delivery,
+	session *discordgo.Session,
+) {
 	defer wg.Done()
 	defer log.Println("consumer has stopped")
 	log.Println("consumer has started")
