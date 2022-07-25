@@ -6,7 +6,7 @@ import (
 	"time"
 
 	poperr "github.com/connorkuehl/popple/errors"
-	"github.com/connorkuehl/popple/karma"
+	"github.com/connorkuehl/popple/internal/karma"
 )
 
 var (

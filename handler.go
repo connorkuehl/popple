@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	poperr "github.com/connorkuehl/popple/errors"
-	"github.com/connorkuehl/popple/parse"
+	"github.com/connorkuehl/popple/internal/parse"
 )
 
 // AnnounceHandler is the type returned by the Mux to denote that the action
