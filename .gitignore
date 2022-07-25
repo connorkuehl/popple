@@ -11,3 +11,4 @@ popple.sqlite
 /cmd/discord/popple/popple.token
 c.out
 c.html
+.poppleenv
