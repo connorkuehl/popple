@@ -216,6 +216,14 @@ func publisher(ctx context.Context, wg *sync.WaitGroup, ch *amqp.Channel, qu amq
 			}
 		case popple.BumpKarmaHandler:
 			increments, _ := popple.ParseBumpKarmaArgs(body)
+			for k, v := range increments {
+				if v == 0 {
+					delete(increments, k)
+				}
+			}
+			if len(increments) == 0 {
+				return
+			}
 
 			var payload bytes.Buffer
 			err := json.NewEncoder(&payload).Encode(event.Event{
