@@ -15,9 +15,9 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/connorkuehl/popple"
+	mysqlrepo "github.com/connorkuehl/popple/cmd/popplesvc/internal/repo/mysql"
 	poperrs "github.com/connorkuehl/popple/errors"
 	"github.com/connorkuehl/popple/event"
-	mysqlrepo "github.com/connorkuehl/popple/repo/mysql"
 )
 
 var (
