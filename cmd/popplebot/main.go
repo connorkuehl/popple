@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -173,208 +172,151 @@ func publisher(ctx context.Context, wg *sync.WaitGroup, ch *amqp.Channel, qu amq
 			return
 		}
 
-		message := strings.TrimSpace(m.ContentWithMentionsReplaced())
-		action, body := mux.Route(message)
-
-		switch action.(type) {
-		case popple.AnnounceHandler:
-			on, err := popple.ParseAnnounceArgs(body)
-			if errors.Is(err, poperrs.ErrMissingArgument) || errors.Is(err, poperrs.ErrInvalidArgument) {
-				err := s.MessageReactionAdd(m.ChannelID, m.ID, "❓")
-				if err != nil {
-					log.Println("failed to react to message:", err)
-				}
-				_, err = s.ChannelMessageSend(m.ChannelID, `Valid announce settings are: "on", "off", "yes", "no"`)
-				if err != nil {
-					log.Println("message send failed:", err)
-				}
-				return
-			}
-
-			var payload bytes.Buffer
-			err = json.NewEncoder(&payload).Encode(
-				event.Event{
-					RequestChangeAnnounce: &event.RequestChangeAnnounce{
-						ReactTo: event.ReactTo{
-							ChannelID: m.ChannelID,
-							MessageID: m.ID,
-						},
-						ServerID:   m.GuildID,
-						NoAnnounce: !on,
-					}})
-			if err != nil {
-				log.Println("failed to encode request.changeannounce:", err)
-				return
-			}
-
-			err = ch.PublishWithContext(
-				ctx,
-				"",
-				qu.Name,
-				false,
-				false,
-				amqp.Publishing{
-					Body: payload.Bytes(),
-				},
-			)
-			if err != nil {
-				log.Println("failed to publish", payload, "err:", err)
-			}
-		case popple.BumpKarmaHandler:
-			increments, _ := popple.ParseBumpKarmaArgs(body)
-			for k, v := range increments {
-				if v == 0 {
-					delete(increments, k)
-				}
-			}
-			if len(increments) == 0 {
-				return
-			}
-
-			var payload bytes.Buffer
-			err := json.NewEncoder(&payload).Encode(event.Event{
-				RequestBumpKarma: &event.RequestBumpKarma{
-					ReplyTo: event.ReplyTo{
-						ChannelID: m.ChannelID,
-					},
-					ServerID: m.GuildID,
-					Who:      increments,
-				}})
-			if err != nil {
-				log.Println("failed to encode request.bumpkarma:", err)
-				return
-			}
-
-			err = ch.PublishWithContext(
-				ctx,
-				"",
-				qu.Name,
-				false,
-				false,
-				amqp.Publishing{
-					Body: payload.Bytes(),
-				},
-			)
-			if err != nil {
-				log.Println("failed to publish", payload, "err:", err)
-			}
-		case popple.KarmaHandler:
-			who, err := popple.ParseKarmaArgs(body)
-			if err != nil {
-				err = s.MessageReactionAdd(m.ChannelID, m.ID, "❓")
-				if err != nil {
-					log.Println("message reaction add failed:", err)
-					return
-				}
-			}
-
-			var payload bytes.Buffer
-			err = json.NewEncoder(&payload).Encode(event.Event{
-				RequestCheckKarma: &event.RequestCheckKarma{
-					ReplyTo: event.ReplyTo{
-						ChannelID: m.ChannelID,
-					},
-					ServerID: m.GuildID,
-					Who:      who,
-				}})
-			if err != nil {
-				log.Println("failed to encode request.checkkarma:", err)
-				return
-			}
-
-			err = ch.PublishWithContext(
-				ctx,
-				"",
-				qu.Name,
-				false,
-				false,
-				amqp.Publishing{
-					Body: payload.Bytes(),
-				},
-			)
-			if err != nil {
-				log.Println("failed to publish", payload, "err:", err)
-			}
-		case popple.LeaderboardHandler:
-			limit, err := popple.ParseLeaderboardArgs(body)
-			if errors.Is(err, poperrs.ErrInvalidArgument) {
-				_, err := s.ChannelMessageSend(m.ChannelID, "The number of entries to list must be a positive non-zero integer")
-				if err != nil {
-					log.Println("message send failed:", err)
-				}
-				return
-			}
-
-			var payload bytes.Buffer
-			err = json.NewEncoder(&payload).Encode(event.Event{
-				RequestCheckLeaderboard: &event.RequestCheckLeaderboard{
-					ReplyTo: event.ReplyTo{
-						ChannelID: m.ChannelID,
-					},
-					ServerID: m.GuildID,
-					Limit:    limit,
-				}})
-			if err != nil {
-				log.Println("failed to encode request.checkleaderboard:", err)
-				return
-			}
-
-			err = ch.PublishWithContext(
-				ctx,
-				"",
-				qu.Name,
-				false,
-				false,
-				amqp.Publishing{
-					Body: payload.Bytes(),
-				},
-			)
-			if err != nil {
-				log.Println("failed to publish", payload, "err:", err)
-			}
-		case popple.LoserboardHandler:
-			limit, err := popple.ParseLoserboardArgs(body)
-			if errors.Is(err, poperrs.ErrInvalidArgument) {
-				_, err := s.ChannelMessageSend(m.ChannelID, "The number of entries to list must be a positive non-zero integer")
-				if err != nil {
-					log.Println("message send failed:", err)
-				}
-				return
-			}
-
-			var payload bytes.Buffer
-			err = json.NewEncoder(&payload).Encode(event.Event{
-				RequestCheckLoserboard: &event.RequestCheckLoserboard{
-					ReplyTo: event.ReplyTo{
-						ChannelID: m.ChannelID,
-					},
-					ServerID: m.GuildID,
-					Limit:    limit,
-				}})
-			if err != nil {
-				log.Println("failed to encode request.checkloserboard:", err)
-				return
-			}
-
-			err = ch.PublishWithContext(
-				ctx,
-				"",
-				qu.Name,
-				false,
-				false,
-				amqp.Publishing{
-					Body: payload.Bytes(),
-				},
-			)
-			if err != nil {
-				log.Println("failed to publish", payload, "err:", err)
-			}
+		err := handleMessage(ctx, mux, ch, qu, s, m)
+		if err != nil {
+			log.Println("failed to handle message: %w", err)
+			return
 		}
 	})
 	defer detachMessageCreate()
 	log.Println("publisher has started")
 
 	<-ctx.Done()
+}
+
+func handleMessage(
+	ctx context.Context,
+	mux *popple.Mux,
+	ch *amqp.Channel,
+	qu amqp.Queue,
+	session *discordgo.Session,
+	msg *discordgo.MessageCreate,
+) error {
+	var req *event.Event
+
+	message := strings.TrimSpace(msg.ContentWithMentionsReplaced())
+	action, body := mux.Route(message)
+
+	switch action.(type) {
+	case popple.AnnounceHandler:
+		on, err := popple.ParseAnnounceArgs(body)
+		if errors.Is(err, poperrs.ErrMissingArgument) || errors.Is(err, poperrs.ErrInvalidArgument) {
+			err := session.MessageReactionAdd(msg.ChannelID, msg.ID, "❓")
+			if err != nil {
+				return fmt.Errorf("failed to react to message: %w", err)
+			}
+			_, err = session.ChannelMessageSend(msg.ChannelID, `Valid announce settings are: "on", "off", "yes", "no"`)
+			if err != nil {
+				err = fmt.Errorf("failed to send message: %w", err)
+			}
+			return err
+		}
+
+		req = &event.Event{
+			RequestChangeAnnounce: &event.RequestChangeAnnounce{
+				ReactTo: event.ReactTo{
+					ChannelID: msg.ChannelID,
+					MessageID: msg.ID,
+				},
+				ServerID:   msg.GuildID,
+				NoAnnounce: !on,
+			}}
+	case popple.BumpKarmaHandler:
+		increments, _ := popple.ParseBumpKarmaArgs(body)
+		for k, v := range increments {
+			if v == 0 {
+				delete(increments, k)
+			}
+		}
+		if len(increments) == 0 {
+			return nil
+		}
+
+		req = &event.Event{
+			RequestBumpKarma: &event.RequestBumpKarma{
+				ReplyTo: event.ReplyTo{
+					ChannelID: msg.ChannelID,
+				},
+				ServerID: msg.GuildID,
+				Who:      increments,
+			}}
+	case popple.KarmaHandler:
+		who, err := popple.ParseKarmaArgs(body)
+		if err != nil {
+			err = session.MessageReactionAdd(msg.ChannelID, msg.ID, "❓")
+			if err != nil {
+				err = fmt.Errorf("message reaction add failed: %w", err)
+			}
+			return err
+		}
+
+		req = &event.Event{
+			RequestCheckKarma: &event.RequestCheckKarma{
+				ReplyTo: event.ReplyTo{
+					ChannelID: msg.ChannelID,
+				},
+				ServerID: msg.GuildID,
+				Who:      who,
+			}}
+	case popple.LeaderboardHandler:
+		limit, err := popple.ParseLeaderboardArgs(body)
+		if errors.Is(err, poperrs.ErrInvalidArgument) {
+			_, err := session.ChannelMessageSend(msg.ChannelID, "The number of entries to list must be a positive non-zero integer")
+			if err != nil {
+				err = fmt.Errorf("message send failed: %w", err)
+			}
+			return err
+		}
+
+		req = &event.Event{
+			RequestCheckLeaderboard: &event.RequestCheckLeaderboard{
+				ReplyTo: event.ReplyTo{
+					ChannelID: msg.ChannelID,
+				},
+				ServerID: msg.GuildID,
+				Limit:    limit,
+			}}
+	case popple.LoserboardHandler:
+		limit, err := popple.ParseLoserboardArgs(body)
+		if errors.Is(err, poperrs.ErrInvalidArgument) {
+			_, err := session.ChannelMessageSend(msg.ChannelID, "The number of entries to list must be a positive non-zero integer")
+			if err != nil {
+				err = fmt.Errorf("message send failed: %w", err)
+			}
+			return err
+		}
+
+		req = &event.Event{
+			RequestCheckLoserboard: &event.RequestCheckLoserboard{
+				ReplyTo: event.ReplyTo{
+					ChannelID: msg.ChannelID,
+				},
+				ServerID: msg.GuildID,
+				Limit:    limit,
+			}}
+	default:
+		return fmt.Errorf("bug: reached default case for handle message: %q", message)
+	}
+
+	return publishRequest(ctx, ch, qu, req)
+}
+
+func publishRequest(ctx context.Context, ch *amqp.Channel, qu amqp.Queue, req *event.Event) error {
+	payload, err := json.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("failed to serialize request: %w", err)
+	}
+
+	return ch.PublishWithContext(
+		ctx,
+		"",
+		qu.Name,
+		false,
+		false,
+		amqp.Publishing{
+			Body: payload,
+		},
+	)
 }
 
 func consumer(ctx context.Context, wg *sync.WaitGroup, events <-chan amqp.Delivery, session *discordgo.Session) {
