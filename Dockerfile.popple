@@ -3,9 +3,9 @@ RUN apk add git
 RUN mkdir /builddir
 ADD . /builddir
 WORKDIR /builddir
-RUN go build ./cmd/popple
+RUN go build ./cmd/popplesvc
 
 FROM alpine:latest
-COPY --from=build /builddir/popple /usr/local/bin/popple
+COPY --from=build /builddir/popplesvc /usr/local/bin/popplesvc
 
-ENTRYPOINT ["/usr/local/bin/popple"]
+ENTRYPOINT ["/usr/local/bin/popplesvc"]
