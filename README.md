@@ -2,27 +2,6 @@
 
 A karma bot for Discord.
 
-## Building
-
-Clone or otherwise download the Popple source code and run:
-
-```console
-$ go build ./...
-```
-
-The `go` toolchain should download the dependencies and build Popple.
-
-## Running
-
-Popple requires a valid Discord bot token in order to interact with the
-Discord API.
-
-Then, once that one-time setup is complete:
-
-```console
-$ ./popple --token <YOUR_SUPER_SECRET_BOT_TOKEN> --database /path/to/popple.sqlite
-```
-
 ## Usage
 
 | Command | Values | Description |
@@ -107,3 +86,112 @@ Person) Person++
 
 It can be turned back on with `@Popple announce yes` or
 `@Popple announce on`.
+
+## Building
+
+Clone or otherwise download the Popple source code and run:
+
+```console
+$ go build ./...
+```
+
+The `go` toolchain should download the dependencies and build Popple.
+
+## Running
+
+### Pre-requisites:
+
+1. A valid Discord bot token so that Popple can connect to and interact
+with Discord.
+1. A MySQL database for persisting karma counts and per-server configuration.
+1. A RabbitMQ instance so that Popple components can exchange messages.
+
+There are currently two application-layer components:
+
+1. popplebot (./cmd/popplebot) is Popple's point-of-presence on Discord. It
+reads and responds to messages in the Discord servers that it is in. If a
+message requires any application logic, it submits a request to RabbitMQ
+so that an instance of popplesvc can take care of it.
+1. popplesvc (./cmd/popplesvc) is where the main application-layer logic takes
+place. It processes requests from popplebot and persists any necessary state
+to the database.
+
+### Quickstart:
+
+Note, the following configuration is sufficient for local development, but
+will require changes in order to be secure for a production deployment.
+
+The only place I have left a placeholder value is for the Discord bot token,
+but otherwise I am using the default RabbitMQ credentials of `guest:guest` and
+the default root credentials for the MySQL docker container in this example.
+
+1. Create an env file to hold all of the necessary Popple configuration:
+
+```console
+cat > .poppleenv <<EOF
+POPPLEBOT_AMQP_HOST=poppleevents
+POPPLEBOT_AMQP_PORT=5672
+POPPLEBOT_AMQP_USER=guest
+POPPLEBOT_AMQP_PASS=guest
+POPPLEBOT_DISCORD_TOKEN=<YOUR_SECRET_DISCORD_TOKEN>
+POPPLE_AMQP_HOST=poppleevents
+POPPLE_AMQP_PORT=5672
+POPPLE_AMQP_USER=guest
+POPPLE_AMQP_PASS=guest
+POPPLE_DB_HOST=poppledb
+POPPLE_DB_PORT=3306
+POPPLE_DB_USER=root
+POPPLE_DB_PASS=password
+POPPLE_DB_NAME=popple
+POPPLE_LISTEN_HEALTH=0.0.0.0:8080
+EOF
+```
+
+2. Create the Docker network so that all of the containers can communicate.
+
+```console
+$ docker network create popple
+```
+
+3. Create a MySQL database
+
+```console
+$ docker volume create poppledata
+$ docker run -d \
+    --name poppledb \
+    --network popple \
+    --publish 3306:3306 \
+    -v poppledata:/var/lib/mysql \
+    -e MYSQL_ROOT_PASSWORD=password \
+    --restart=unless-stopped \
+    mysql:8.0
+$ mysql -h 127.0.0.1 -u root -p
+mysql> CREATE DATABASE popple;
+mysql> USE popple;
+mysql> source ./cmd/popplesvc/.devel/schema.sql;
+```
+
+4. Create a RabbitMQ instance
+
+```console
+$ docker run -d --name poppleevents --network popple --restart=unless-stopped rabbitmq:3.10
+```
+
+5. Finally, build and run popplebot and popplesvc:
+
+```console
+$ docker build -t popplesvc:latest -f Dockerfile.popple .
+$ docker build -t popplebot:latest -f Dockerfile.bot .
+$ docker run -d \
+    --name popplesvc \
+    --network popple \
+    --restart=unless-stopped \
+    --env-file .poppleenv \
+    popplesvc:latest
+$ docker run -d \
+    --name popplebot \
+    --network popple \
+    --restart=unless-stopped \
+    --env-file .poppleenv \
+    popplebot:latest
+```
