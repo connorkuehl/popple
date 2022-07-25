@@ -189,6 +189,10 @@ func run(ctx context.Context) error {
 					continue
 				}
 
+				if len(incr) == 0 {
+					continue
+				}
+
 				cfg, err := repo.Config(req.ServerID)
 				if errors.Is(err, poperrs.ErrNotFound) {
 					err = nil
