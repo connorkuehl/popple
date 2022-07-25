@@ -15,7 +15,6 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/connorkuehl/popple"
-	"github.com/connorkuehl/popple/cmd/popplesvc/internal/service"
 	poperrs "github.com/connorkuehl/popple/errors"
 	"github.com/connorkuehl/popple/event"
 	mysqlrepo "github.com/connorkuehl/popple/repo/mysql"
@@ -112,12 +111,10 @@ func run(ctx context.Context) error {
 
 	repo := mysqlrepo.New(db)
 
-	var svc service.Service = service.New(repo)
-	svc = service.NewLogged(svc)
-
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		details, ok := svc.Health()
-		details["healthy"] = ok
+		details := map[string]interface{}{
+			"healthy": true,
+		}
 
 		if err := json.NewEncoder(w).Encode(details); err != nil {
 			log.Printf("failed to encode health checks: %v", err)
