@@ -1,21 +1,20 @@
-package popple
+package popple_test
 
 import (
 	"errors"
 	"reflect"
 	"testing"
 
-	"github.com/connorkuehl/popple/create"
+	"github.com/connorkuehl/popple"
 	poperr "github.com/connorkuehl/popple/errors"
 	"github.com/connorkuehl/popple/repo/null"
-	"github.com/connorkuehl/popple/update"
 )
 
 func TestAnnounce(t *testing.T) {
 	t.Run("it persists a new config object if one doesn't exist", func(t *testing.T) {
 		repo := null.NewRepository()
 
-		err := Announce(repo, "10", false)
+		err := popple.Announce(repo, "10", false)
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}
@@ -47,7 +46,7 @@ func TestAnnounce(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := null.NewRepository()
 
-			err := Announce(repo, "11", tt.on)
+			err := popple.Announce(repo, "11", tt.on)
 			if err != nil {
 				t.Errorf("unexpected err: %v", err)
 			}
@@ -69,7 +68,7 @@ func TestBumpKarma(t *testing.T) {
 	t.Run("net-zero bumps are no-ops", func(t *testing.T) {
 		repo := null.NewRepository()
 
-		got, err := BumpKarma(repo, "1", map[string]int64{"lion": 0})
+		got, err := popple.BumpKarma(repo, "1", map[string]int64{"lion": 0})
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}
@@ -94,7 +93,7 @@ func TestBumpKarma(t *testing.T) {
 			t.Errorf("got %v, want %v", err, poperr.ErrNotFound)
 		}
 
-		got, err := BumpKarma(repo, "2", map[string]int64{"bear": 1})
+		got, err := popple.BumpKarma(repo, "2", map[string]int64{"bear": 1})
 		if err != nil {
 			t.Errorf("unexpected error %v", err)
 		}
@@ -117,17 +116,17 @@ func TestBumpKarma(t *testing.T) {
 	t.Run("bumping an existing entity modifies its karma", func(t *testing.T) {
 		repo := null.NewRepository()
 
-		err := repo.CreateEntity(create.Entity{ServerID: "3", Name: "crow"})
+		err := repo.CreateEntity(popple.Entity{ServerID: "3", Name: "crow"})
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}
 
-		err = repo.UpdateEntity(update.Entity{ServerID: "3", Name: "crow", Karma: 5})
+		err = repo.UpdateEntity(popple.Entity{ServerID: "3", Name: "crow", Karma: 5})
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}
 
-		got, err := BumpKarma(repo, "3", map[string]int64{"crow": -1})
+		got, err := popple.BumpKarma(repo, "3", map[string]int64{"crow": -1})
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}
@@ -150,17 +149,17 @@ func TestBumpKarma(t *testing.T) {
 	t.Run("an entity reduced to zero karma is garbage collected", func(t *testing.T) {
 		repo := null.NewRepository()
 
-		err := repo.CreateEntity(create.Entity{ServerID: "4", Name: "orca"})
+		err := repo.CreateEntity(popple.Entity{ServerID: "4", Name: "orca"})
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}
 
-		err = repo.UpdateEntity(update.Entity{ServerID: "4", Name: "orca", Karma: -1})
+		err = repo.UpdateEntity(popple.Entity{ServerID: "4", Name: "orca", Karma: -1})
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}
 
-		got, err := BumpKarma(repo, "4", map[string]int64{"orca": 1})
+		got, err := popple.BumpKarma(repo, "4", map[string]int64{"orca": 1})
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}
@@ -181,7 +180,7 @@ func TestKarma(t *testing.T) {
 	t.Run("a non-persisted entity is reported as having zero karma", func(t *testing.T) {
 		repo := null.NewRepository()
 
-		got, err := Karma(repo, "5", map[string]struct{}{"lynx": {}})
+		got, err := popple.Karma(repo, "5", map[string]struct{}{"lynx": {}})
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}
@@ -195,17 +194,17 @@ func TestKarma(t *testing.T) {
 	t.Run("a persisted entity has its persisted karma reported", func(t *testing.T) {
 		repo := null.NewRepository()
 
-		err := repo.CreateEntity(create.Entity{ServerID: "6", Name: "crab"})
+		err := repo.CreateEntity(popple.Entity{ServerID: "6", Name: "crab"})
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}
 
-		err = repo.UpdateEntity(update.Entity{ServerID: "6", Name: "crab", Karma: -100})
+		err = repo.UpdateEntity(popple.Entity{ServerID: "6", Name: "crab", Karma: -100})
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}
 
-		got, err := Karma(repo, "6", map[string]struct{}{"crab": {}})
+		got, err := popple.Karma(repo, "6", map[string]struct{}{"crab": {}})
 		if err != nil {
 			t.Errorf("unexpected err: %v", err)
 		}

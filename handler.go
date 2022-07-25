@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	poperr "github.com/connorkuehl/popple/errors"
-	"github.com/connorkuehl/popple/get"
 	"github.com/connorkuehl/popple/parse"
 )
 
@@ -52,7 +51,7 @@ func ParseBumpKarmaArgs(message string) (increments map[string]int64, err error)
 
 // KarmaHandler is the type returned by the Mux to denote that the action being
 // taken should be forwarded to Karma.
-type KarmaHandler func(repo get.EntityRepository, serverID string, who map[string]struct{}) (levels map[string]int64, err error)
+type KarmaHandler func(repo Repository, serverID string, who map[string]struct{}) (levels map[string]int64, err error)
 
 // ParseKarmaArgs parses the arguments that must be forwarded to the
 // KarmaHandler.
@@ -70,7 +69,7 @@ func ParseKarmaArgs(message string) (who map[string]struct{}, err error) {
 
 // LeaderboardHandler is the type returned by the Mux to denote that the action being
 // taken should be forwarded to Leaderboard.
-type LeaderboardHandler func(repo get.EntityRepository, serverID string, limit uint) ([]get.Entity, error)
+type LeaderboardHandler func(repo Repository, serverID string, limit uint) ([]Entity, error)
 
 // ParseLeaderboardArgs parses the arguments that must be forwarded to the
 // LeaderboardHandler.
@@ -80,7 +79,7 @@ func ParseLeaderboardArgs(message string) (limit uint, err error) {
 
 // LoserboardHandler is the type returned by the Mux to denote that the action being
 // taken should be forwarded to Loserboard.
-type LoserboardHandler func(repo get.EntityRepository, serverID string, limit uint) ([]get.Entity, error)
+type LoserboardHandler func(repo Repository, serverID string, limit uint) ([]Entity, error)
 
 // ParseLoserboardArgs parses the arguments that must be forwarded to the
 // LoserboardHandler.

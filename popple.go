@@ -3,27 +3,43 @@ package popple
 
 import (
 	"errors"
+	"time"
 
-	"github.com/connorkuehl/popple/create"
 	poperr "github.com/connorkuehl/popple/errors"
-	"github.com/connorkuehl/popple/get"
 	"github.com/connorkuehl/popple/karma"
-	"github.com/connorkuehl/popple/remove"
-	"github.com/connorkuehl/popple/update"
 )
 
 var (
 	defaultLeaderboardSize uint = 10
 )
 
+type Config struct {
+	ID         int64
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	ServerID   string
+	NoAnnounce bool
+}
+
+type Entity struct {
+	ID        int64
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	ServerID  string
+	Name      string
+	Karma     int64
+}
+
 type Repository interface {
-	create.ConfigRepository
-	create.EntityRepository
-	get.ConfigRepository
-	get.EntityRepository
-	remove.EntityRepository
-	update.ConfigRepository
-	update.EntityRepository
+	CreateConfig(Config) error
+	Config(serverID string) (Config, error)
+	Entity(serverID, name string) (Entity, error)
+	Leaderboard(serverID string, limit uint) ([]Entity, error)
+	Loserboard(serverID string, limit uint) ([]Entity, error)
+	UpdateConfig(Config) error
+	CreateEntity(Entity) error
+	RemoveEntity(serverID, name string) error
+	UpdateEntity(Entity) error
 }
 
 // Announce configures a server's "announce" setting.
@@ -33,13 +49,13 @@ type Repository interface {
 func Announce(repo Repository, serverID string, on bool) error {
 	_, err := repo.Config(serverID)
 	if errors.Is(err, poperr.ErrNotFound) {
-		err = repo.CreateConfig(create.Config{ServerID: serverID})
+		err = repo.CreateConfig(Config{ServerID: serverID})
 		if err != nil {
 			return err
 		}
 	}
 
-	err = repo.UpdateConfig(update.Config{ServerID: serverID, NoAnnounce: !on})
+	err = repo.UpdateConfig(Config{ServerID: serverID, NoAnnounce: !on})
 
 	return err
 }
@@ -47,7 +63,7 @@ func Announce(repo Repository, serverID string, on bool) error {
 // BumpKarma modifies each entity's karma (the key in the 'increments' map) by
 // a relative amount (the value in the 'increments' map).
 func BumpKarma(repo Repository, serverID string, increments map[string]int64) (newKarmaLevels map[string]int64, err error) {
-	var needsCreate []create.Entity
+	var needsCreate []Entity
 
 	// first, collect the current karma levels for the subjects whose karma is being bumped.
 	pre := make(map[string]int64)
@@ -59,7 +75,7 @@ func BumpKarma(repo Repository, serverID string, increments map[string]int64) (n
 
 		entity, err := repo.Entity(serverID, name)
 		if errors.Is(err, poperr.ErrNotFound) {
-			needsCreate = append(needsCreate, create.Entity{ServerID: serverID, Name: name})
+			needsCreate = append(needsCreate, Entity{ServerID: serverID, Name: name})
 			err = nil
 		}
 		if err != nil {
@@ -87,7 +103,7 @@ func BumpKarma(repo Repository, serverID string, increments map[string]int64) (n
 			// garbage collect the entity, there's no point in storing records with 0 karma.
 			err = repo.RemoveEntity(serverID, name)
 		} else {
-			err = repo.UpdateEntity(update.Entity{ServerID: serverID, Name: name, Karma: karma})
+			err = repo.UpdateEntity(Entity{ServerID: serverID, Name: name, Karma: karma})
 		}
 
 		if err != nil {
@@ -100,7 +116,7 @@ func BumpKarma(repo Repository, serverID string, increments map[string]int64) (n
 
 // Karma queries the karma levels for each of the entities (the keys in the 'who'
 // map.)
-func Karma(repo get.EntityRepository, serverID string, who map[string]struct{}) (levels map[string]int64, err error) {
+func Karma(repo Repository, serverID string, who map[string]struct{}) (levels map[string]int64, err error) {
 	levels = make(map[string]int64)
 	for name := range who {
 		entity, err := repo.Entity(serverID, name)
@@ -121,12 +137,12 @@ func Karma(repo get.EntityRepository, serverID string, who map[string]struct{}) 
 
 // Leaderboard queries the entities with the highest karma levels (the number of
 // entities returned will not exceed 'limit.')
-func Leaderboard(repo get.EntityRepository, serverID string, limit uint) (board []get.Entity, err error) {
+func Leaderboard(repo Repository, serverID string, limit uint) (board []Entity, err error) {
 	return repo.Leaderboard(serverID, limit)
 }
 
 // Loserboard queries the entities with the lowest karma levels (the number of
 // entities returned will not exceed 'limit.')
-func Loserboard(repo get.EntityRepository, serverID string, limit uint) (board []get.Entity, err error) {
+func Loserboard(repo Repository, serverID string, limit uint) (board []Entity, err error) {
 	return repo.Loserboard(serverID, limit)
 }
