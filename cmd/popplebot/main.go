@@ -158,6 +158,12 @@ func publisher(ctx context.Context, wg *sync.WaitGroup, ch *amqp.Channel, qu amq
 
 	mux := popple.NewMux("@" + session.State.User.Username)
 	detachMessageCreate := session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		if s.State.User.ID == m.Author.ID {
 			return
 		}
@@ -202,7 +208,7 @@ func publisher(ctx context.Context, wg *sync.WaitGroup, ch *amqp.Channel, qu amq
 			}
 
 			err = ch.PublishWithContext(
-				context.TODO(),
+				ctx,
 				"",
 				qu.Name,
 				false,
@@ -240,7 +246,7 @@ func publisher(ctx context.Context, wg *sync.WaitGroup, ch *amqp.Channel, qu amq
 			}
 
 			err = ch.PublishWithContext(
-				context.TODO(),
+				ctx,
 				"",
 				qu.Name,
 				false,
@@ -277,7 +283,7 @@ func publisher(ctx context.Context, wg *sync.WaitGroup, ch *amqp.Channel, qu amq
 			}
 
 			err = ch.PublishWithContext(
-				context.TODO(),
+				ctx,
 				"",
 				qu.Name,
 				false,
@@ -314,7 +320,7 @@ func publisher(ctx context.Context, wg *sync.WaitGroup, ch *amqp.Channel, qu amq
 			}
 
 			err = ch.PublishWithContext(
-				context.TODO(),
+				ctx,
 				"",
 				qu.Name,
 				false,
@@ -351,7 +357,7 @@ func publisher(ctx context.Context, wg *sync.WaitGroup, ch *amqp.Channel, qu amq
 			}
 
 			err = ch.PublishWithContext(
-				context.TODO(),
+				ctx,
 				"",
 				qu.Name,
 				false,

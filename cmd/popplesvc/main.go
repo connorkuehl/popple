@@ -168,7 +168,7 @@ func run(ctx context.Context) error {
 					continue
 				}
 				err = ch.PublishWithContext(
-					context.TODO(),
+					ctx,
 					"popple_topic",
 					"changed.announce",
 					false,
@@ -214,7 +214,7 @@ func run(ctx context.Context) error {
 					continue
 				}
 				err = ch.PublishWithContext(
-					context.TODO(),
+					ctx,
 					"popple_topic",
 					"changed.karma",
 					false,
@@ -246,7 +246,7 @@ func run(ctx context.Context) error {
 					continue
 				}
 				err = ch.PublishWithContext(
-					context.TODO(),
+					ctx,
 					"popple_topic",
 					"checked.karma",
 					false,
@@ -283,7 +283,7 @@ func run(ctx context.Context) error {
 					continue
 				}
 				err = ch.PublishWithContext(
-					context.TODO(),
+					ctx,
 					"popple_topic",
 					"checked.karma",
 					false,
@@ -320,7 +320,7 @@ func run(ctx context.Context) error {
 					continue
 				}
 				err = ch.PublishWithContext(
-					context.TODO(),
+					ctx,
 					"popple_topic",
 					"checked.karma",
 					false,
