@@ -119,7 +119,7 @@ func run(ctx context.Context) error {
 
 	events, err := ch.Consume(
 		queue.Name,
-		"",
+		"popplebot",
 		true,
 		false,
 		false,
