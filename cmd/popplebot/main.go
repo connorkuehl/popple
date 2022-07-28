@@ -14,10 +14,10 @@ import (
 
 	"github.com/connorkuehl/popple"
 	"github.com/connorkuehl/popple/cmd/popplebot/internal/discord"
-	internalevent "github.com/connorkuehl/popple/cmd/popplebot/internal/event"
 	"github.com/connorkuehl/popple/cmd/popplebot/internal/rabbitmq"
 	"github.com/connorkuehl/popple/cmd/popplebot/internal/service"
 	"github.com/connorkuehl/popple/event"
+	internalevent "github.com/connorkuehl/popple/internal/event"
 )
 
 var (
