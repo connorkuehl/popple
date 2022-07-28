@@ -175,7 +175,13 @@ $ docker stop poppledb
 $ docker rm poppledb
 ```
 
-4. Start it up:
+4. Build the popplebot and popplesvc images if needed:
+
+```console
+$ docker-compose build
+```
+
+5. Start it up:
 
 ```console
 $ docker-compose up -d

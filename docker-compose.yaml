@@ -1,6 +1,9 @@
 services:
   bot:
     image: popplebot:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
     depends_on:
       - eventbus
     networks:
@@ -9,6 +12,9 @@ services:
 
   svc:
     image: popplesvc:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.popple
     depends_on:
       - db
       - eventbus
