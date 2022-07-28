@@ -14,10 +14,11 @@ import (
 	"github.com/go-sql-driver/mysql"
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	"github.com/connorkuehl/popple"
+	"github.com/connorkuehl/popple/cmd/popplesvc/internal/rabbitmq"
 	mysqlrepo "github.com/connorkuehl/popple/cmd/popplesvc/internal/repo/mysql"
-	poperrs "github.com/connorkuehl/popple/errors"
+	"github.com/connorkuehl/popple/cmd/popplesvc/internal/service"
 	"github.com/connorkuehl/popple/event"
+	internalevent "github.com/connorkuehl/popple/internal/event"
 )
 
 var (
@@ -109,7 +110,10 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	repo := mysqlrepo.New(db)
+	var svc service.Service = service.New(
+		rabbitmq.NewEventBus(ch),
+		mysqlrepo.New(db),
+	)
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		details := map[string]interface{}{
@@ -127,154 +131,46 @@ func run(ctx context.Context) error {
 
 	log.Println("ready to dole out some karma")
 
+	eventLoop(ctx, svc, internalevent.Stream(ctx, requests))
+	return nil
+}
+
+func eventLoop(ctx context.Context, svc service.Service, events <-chan event.Event) {
+	defer log.Println("event loop has exited")
+	log.Println("event loop is ready")
+
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
-		case req, ok := <-requests:
+			log.Println("event loop exiting:", ctx.Err())
+			return
+		case evt, ok := <-events:
 			if !ok {
-				return errors.New("consumer has seen a closed requests channel")
+				log.Println("event loop exiting: event chan is closed")
+				return
 			}
 
-			var evt event.Event
-			err := json.Unmarshal(req.Body, &evt)
+			structured, _ := json.Marshal(evt)
+			log.Println(string(structured))
+
+			var err error
+			switch {
+			case evt.RequestCheckKarma != nil:
+				err = svc.CheckKarma(ctx, evt.RequestCheckKarma)
+			case evt.RequestCheckLeaderboard != nil:
+				err = svc.CheckLeaderboard(ctx, evt.RequestCheckLeaderboard)
+			case evt.RequestCheckLoserboard != nil:
+				err = svc.CheckLoserboard(ctx, evt.RequestCheckLoserboard)
+			case evt.RequestChangeAnnounce != nil:
+				err = svc.ChangeAnnounce(ctx, evt.RequestChangeAnnounce)
+			case evt.RequestBumpKarma != nil:
+				err = svc.ChangeKarma(ctx, evt.RequestBumpKarma)
+			default:
+				err = errors.New("unknown event type")
+			}
 			if err != nil {
-				log.Println("failed to deserialize event:", err)
-				continue
-			}
-
-			eventJSON, _ := json.Marshal(evt)
-			log.Println("got event", string(eventJSON))
-
-			err = handleRequest(ctx, ch, repo, &evt)
-			if err != nil {
-				log.Println("request failed:", err)
-				continue
+				log.Println("event handling failed:", err)
 			}
 		}
 	}
-}
-
-func handleRequest(ctx context.Context, ch *amqp.Channel, repo *mysqlrepo.Repository, evt *event.Event) error {
-	var (
-		rsp *event.Event
-		key string
-	)
-
-	switch {
-	case evt.RequestChangeAnnounce != nil:
-		req := evt.RequestChangeAnnounce
-		err := popple.Announce(repo, req.ServerID, !req.NoAnnounce)
-		if err != nil {
-			return fmt.Errorf("announce: %w", err)
-		}
-
-		key = "changed.announce"
-		rsp = &event.Event{
-			ChangedAnnounce: &event.ChangedAnnounce{
-				ReactTo: req.ReactTo,
-			},
-		}
-	case evt.RequestBumpKarma != nil:
-		req := evt.RequestBumpKarma
-		incr, err := popple.BumpKarma(repo, req.ServerID, req.Who)
-		if err != nil {
-			return fmt.Errorf("bump karma: %w", err)
-		}
-
-		if len(incr) == 0 {
-			return nil
-		}
-
-		cfg, err := repo.Config(req.ServerID)
-		if errors.Is(err, poperrs.ErrNotFound) {
-			err = nil
-		}
-		if err != nil {
-			return fmt.Errorf("config: %w", err)
-		}
-
-		key = "changed.karma"
-		rsp = &event.Event{
-			ChangedKarma: &event.ChangedKarma{
-				ReplyTo:  req.ReplyTo,
-				Who:      incr,
-				Announce: !cfg.NoAnnounce,
-			},
-		}
-	case evt.RequestCheckKarma != nil:
-		req := evt.RequestCheckKarma
-		who, err := popple.Karma(repo, req.ServerID, req.Who)
-		if err != nil {
-			return fmt.Errorf("karma: %w", err)
-		}
-
-		key = "checked.karma"
-		rsp = &event.Event{
-			CheckedKarma: &event.CheckedKarma{
-				ReplyTo: req.ReplyTo,
-				Who:     who,
-			},
-		}
-	case evt.RequestCheckLeaderboard != nil:
-		req := evt.RequestCheckLeaderboard
-		top, err := popple.Leaderboard(repo, req.ServerID, req.Limit)
-		if err != nil {
-			return fmt.Errorf("leaderboard: %w", err)
-		}
-
-		board := make([]event.Score, 0, len(top))
-		for _, s := range top {
-			board = append(board, event.Score{Name: s.Name, Karma: s.Karma})
-		}
-
-		key = "checked.leaderboard"
-		rsp = &event.Event{
-			CheckedLeaderboard: &event.CheckedLeaderboard{
-				ReplyTo: req.ReplyTo,
-				Board:   board,
-			},
-		}
-	case evt.RequestCheckLoserboard != nil:
-		req := evt.RequestCheckLoserboard
-		top, err := popple.Loserboard(repo, req.ServerID, req.Limit)
-		if err != nil {
-			return fmt.Errorf("loserboard: %w", err)
-		}
-
-		board := make([]event.Score, 0, len(top))
-		for _, s := range top {
-			board = append(board, event.Score{Name: s.Name, Karma: s.Karma})
-		}
-
-		key = "checked.loserboard"
-		rsp = &event.Event{
-			CheckedLoserboard: &event.CheckedLoserboard{
-				ReplyTo: req.ReplyTo,
-				Board:   board,
-			},
-		}
-	default:
-		log.Println("discarding unknown request:", evt)
-		return nil
-	}
-
-	return publishToPoppleTopic(ctx, ch, key, rsp)
-}
-
-func publishToPoppleTopic(ctx context.Context, ch *amqp.Channel, key string, evt *event.Event) error {
-	payload, err := json.Marshal(evt)
-	if err != nil {
-		return fmt.Errorf("failed to serialize event: %w", err)
-	}
-	return ch.PublishWithContext(
-		ctx,
-		"popple_topic",
-		key,
-		false,
-		false,
-		amqp.Publishing{
-			Body: payload,
-		},
-	)
 }
