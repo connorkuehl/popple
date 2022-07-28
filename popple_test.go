@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/connorkuehl/popple"
-	poperr "github.com/connorkuehl/popple/errors"
 	"github.com/connorkuehl/popple/internal/repo/null"
 )
 
@@ -80,8 +79,8 @@ func TestBumpKarma(t *testing.T) {
 		}
 
 		_, err = repo.Entity("1", "lion")
-		if !errors.Is(err, poperr.ErrNotFound) {
-			t.Errorf("got %v, want %v", err, poperr.ErrNotFound)
+		if !errors.Is(err, popple.ErrNotFound) {
+			t.Errorf("got %v, want %v", err, popple.ErrNotFound)
 		}
 	})
 
@@ -89,8 +88,8 @@ func TestBumpKarma(t *testing.T) {
 		repo := null.NewRepository()
 
 		_, err := repo.Entity("2", "bear")
-		if !errors.Is(err, poperr.ErrNotFound) {
-			t.Errorf("got %v, want %v", err, poperr.ErrNotFound)
+		if !errors.Is(err, popple.ErrNotFound) {
+			t.Errorf("got %v, want %v", err, popple.ErrNotFound)
 		}
 
 		got, err := popple.BumpKarma(repo, "2", map[string]int64{"bear": 1})
@@ -170,8 +169,8 @@ func TestBumpKarma(t *testing.T) {
 		}
 
 		_, err = repo.Entity("4", "orca")
-		if !errors.Is(err, poperr.ErrNotFound) {
-			t.Errorf("got %v, want %v", err, poperr.ErrNotFound)
+		if !errors.Is(err, popple.ErrNotFound) {
+			t.Errorf("got %v, want %v", err, popple.ErrNotFound)
 		}
 	})
 }

@@ -9,7 +9,6 @@ import (
 
 	"github.com/connorkuehl/popple"
 	"github.com/connorkuehl/popple/cmd/popplebot/internal/discord"
-	poperrs "github.com/connorkuehl/popple/errors"
 	"github.com/connorkuehl/popple/event"
 )
 
@@ -115,7 +114,7 @@ func (s *service) HandleDiscordMessage(ctx context.Context, msg discord.Message)
 	switch action.(type) {
 	case popple.AnnounceHandler:
 		on, err := popple.ParseAnnounceArgs(body)
-		if errors.Is(err, poperrs.ErrMissingArgument) || errors.Is(err, poperrs.ErrInvalidArgument) {
+		if errors.Is(err, popple.ErrMissingArgument) || errors.Is(err, popple.ErrInvalidArgument) {
 			err := s.discord.ReactToMessage(msg.ChannelID, msg.ID, "❓")
 			if err != nil {
 				return fmt.Errorf("failed to react to message: %w", err)
@@ -175,7 +174,7 @@ func (s *service) HandleDiscordMessage(ctx context.Context, msg discord.Message)
 			}}
 	case popple.LeaderboardHandler:
 		limit, err := popple.ParseLeaderboardArgs(body)
-		if errors.Is(err, poperrs.ErrInvalidArgument) {
+		if errors.Is(err, popple.ErrInvalidArgument) {
 			err := s.discord.SendMessage(msg.ChannelID, "The number of entries to list must be a positive non-zero integer")
 			if err != nil {
 				err = fmt.Errorf("message send failed: %w", err)
@@ -193,7 +192,7 @@ func (s *service) HandleDiscordMessage(ctx context.Context, msg discord.Message)
 			}}
 	case popple.LoserboardHandler:
 		limit, err := popple.ParseLoserboardArgs(body)
-		if errors.Is(err, poperrs.ErrInvalidArgument) {
+		if errors.Is(err, popple.ErrInvalidArgument) {
 			err := s.discord.SendMessage(msg.ChannelID, "The number of entries to list must be a positive non-zero integer")
 			if err != nil {
 				err = fmt.Errorf("message send failed: %w", err)

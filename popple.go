@@ -5,12 +5,18 @@ import (
 	"errors"
 	"time"
 
-	poperr "github.com/connorkuehl/popple/errors"
 	"github.com/connorkuehl/popple/internal/karma"
 )
 
 var (
 	defaultLeaderboardSize uint = 10
+)
+
+var (
+	ErrAlreadyExists   = errors.New("already exists")
+	ErrInvalidArgument = errors.New("invalid argument")
+	ErrMissingArgument = errors.New("missing argument")
+	ErrNotFound        = errors.New("not found")
 )
 
 type Config struct {
@@ -48,7 +54,7 @@ type Repository interface {
 // levels for whichever entities just had their karma levels bumped.
 func Announce(repo Repository, serverID string, on bool) error {
 	_, err := repo.Config(serverID)
-	if errors.Is(err, poperr.ErrNotFound) {
+	if errors.Is(err, ErrNotFound) {
 		err = repo.CreateConfig(Config{ServerID: serverID})
 		if err != nil {
 			return err
@@ -74,7 +80,7 @@ func BumpKarma(repo Repository, serverID string, increments map[string]int64) (n
 		}
 
 		entity, err := repo.Entity(serverID, name)
-		if errors.Is(err, poperr.ErrNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			needsCreate = append(needsCreate, Entity{ServerID: serverID, Name: name})
 			err = nil
 		}
@@ -120,7 +126,7 @@ func Karma(repo Repository, serverID string, who map[string]struct{}) (levels ma
 	levels = make(map[string]int64)
 	for name := range who {
 		entity, err := repo.Entity(serverID, name)
-		if errors.Is(err, poperr.ErrNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			err = nil
 		}
 		if err != nil {

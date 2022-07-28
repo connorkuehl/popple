@@ -4,8 +4,6 @@ import (
 	"errors"
 	"reflect"
 	"testing"
-
-	poperr "github.com/connorkuehl/popple/errors"
 )
 
 func TestParseAnnounceArgs(t *testing.T) {
@@ -51,15 +49,15 @@ func TestParseAnnounceArgs(t *testing.T) {
 
 	t.Run("argument is required", func(t *testing.T) {
 		_, err := ParseAnnounceArgs("")
-		if !errors.Is(err, poperr.ErrMissingArgument) {
-			t.Errorf("got %v, want %v", err, poperr.ErrMissingArgument)
+		if !errors.Is(err, ErrMissingArgument) {
+			t.Errorf("got %v, want %v", err, ErrMissingArgument)
 		}
 	})
 
 	t.Run("argument must be valid", func(t *testing.T) {
 		_, err := ParseAnnounceArgs("asdf")
-		if !errors.Is(err, poperr.ErrInvalidArgument) {
-			t.Errorf("got %v, want %v", err, poperr.ErrMissingArgument)
+		if !errors.Is(err, ErrInvalidArgument) {
+			t.Errorf("got %v, want %v", err, ErrMissingArgument)
 		}
 	})
 }
@@ -70,8 +68,8 @@ func TestParseBumpKarmaArgs(t *testing.T) {
 func TestParseKarmaArgs(t *testing.T) {
 	t.Run("it needs at least one name", func(t *testing.T) {
 		_, err := ParseKarmaArgs("")
-		if !errors.Is(err, poperr.ErrMissingArgument) {
-			t.Errorf("got %v, want %v", err, poperr.ErrMissingArgument)
+		if !errors.Is(err, ErrMissingArgument) {
+			t.Errorf("got %v, want %v", err, ErrMissingArgument)
 		}
 	})
 
@@ -102,15 +100,15 @@ func TestParseBoardArgs(t *testing.T) {
 
 	t.Run("it returns an error if the argument is 0", func(t *testing.T) {
 		_, got := ParseBoardArgs("0")
-		if !errors.Is(got, poperr.ErrInvalidArgument) {
-			t.Errorf("got %v, want %v", got, poperr.ErrInvalidArgument)
+		if !errors.Is(got, ErrInvalidArgument) {
+			t.Errorf("got %v, want %v", got, ErrInvalidArgument)
 		}
 	})
 
 	t.Run("it returns an error when the argument is not an integer", func(t *testing.T) {
 		_, got := ParseBoardArgs("asdf")
-		if !errors.Is(got, poperr.ErrInvalidArgument) {
-			t.Errorf("got %v, want %v", got, poperr.ErrInvalidArgument)
+		if !errors.Is(got, ErrInvalidArgument) {
+			t.Errorf("got %v, want %v", got, ErrInvalidArgument)
 		}
 	})
 

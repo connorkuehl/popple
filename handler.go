@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	poperr "github.com/connorkuehl/popple/errors"
 	"github.com/connorkuehl/popple/internal/parse"
 )
 
@@ -21,7 +20,7 @@ func ParseAnnounceArgs(message string) (on bool, err error) {
 	if ok := scanner.Scan(); !ok {
 		err := scanner.Err()
 		if err == nil {
-			return false, poperr.ErrMissingArgument
+			return false, ErrMissingArgument
 		}
 		return false, err
 	}
@@ -33,7 +32,7 @@ func ParseAnnounceArgs(message string) (on bool, err error) {
 	case "off", "no":
 		on = false
 	default:
-		return false, poperr.ErrInvalidArgument
+		return false, ErrInvalidArgument
 	}
 
 	return on, nil
@@ -58,7 +57,7 @@ type KarmaHandler func(repo Repository, serverID string, who map[string]struct{}
 func ParseKarmaArgs(message string) (who map[string]struct{}, err error) {
 	increments := parse.Subjects(message)
 	if len(increments) < 1 {
-		return nil, poperr.ErrMissingArgument
+		return nil, ErrMissingArgument
 	}
 	who = make(map[string]struct{})
 	for name := range increments {
@@ -104,10 +103,10 @@ func ParseBoardArgs(message string) (limit uint, err error) {
 	} else {
 		parsedLimit, err := strconv.Atoi(scanner.Text())
 		if err != nil {
-			return 0, poperr.ErrInvalidArgument
+			return 0, ErrInvalidArgument
 		}
 		if parsedLimit < 1 {
-			return 0, poperr.ErrInvalidArgument
+			return 0, ErrInvalidArgument
 		}
 		limit = uint(parsedLimit)
 	}

@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/connorkuehl/popple"
-	poperrs "github.com/connorkuehl/popple/errors"
 	"github.com/connorkuehl/popple/event"
 )
 
@@ -111,7 +110,7 @@ func (s *service) ChangeKarma(ctx context.Context, req *event.RequestBumpKarma) 
 	}
 
 	cfg, err := s.repo.Config(req.ServerID)
-	if errors.Is(err, poperrs.ErrNotFound) {
+	if errors.Is(err, popple.ErrNotFound) {
 		err = nil
 	}
 	if err != nil {

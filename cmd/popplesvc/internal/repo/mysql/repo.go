@@ -8,7 +8,6 @@ import (
 	"errors"
 
 	"github.com/connorkuehl/popple"
-	poperr "github.com/connorkuehl/popple/errors"
 )
 
 // Repository is a MySQL repository.
@@ -39,7 +38,7 @@ func (r *Repository) Config(serverID string) (popple.Config, error) {
 	c := popple.Config{ServerID: serverID}
 	err := row.Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt, &c.NoAnnounce)
 	if errors.Is(err, sql.ErrNoRows) {
-		err = poperr.ErrNotFound
+		err = popple.ErrNotFound
 	}
 	if err != nil {
 		return popple.Config{}, err
@@ -78,7 +77,7 @@ func (r *Repository) Entity(serverID, name string) (popple.Entity, error) {
 	e := popple.Entity{ServerID: serverID, Name: name}
 	err := row.Scan(&e.ID, &e.CreatedAt, &e.UpdatedAt, &e.Karma)
 	if errors.Is(err, sql.ErrNoRows) {
-		err = poperr.ErrNotFound
+		err = popple.ErrNotFound
 	}
 	if err != nil {
 		return popple.Entity{}, err

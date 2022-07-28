@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/connorkuehl/popple"
-	"github.com/connorkuehl/popple/errors"
 )
 
 type Entity struct {
@@ -51,7 +50,7 @@ func (n *Repository) CreateEntity(entity popple.Entity) error {
 
 	_, ok = srv[entity.Name]
 	if ok {
-		return errors.ErrNotFound
+		return popple.ErrNotFound
 	}
 
 	t := time.Now()
@@ -72,12 +71,12 @@ func (n *Repository) CreateEntity(entity popple.Entity) error {
 func (n *Repository) Entity(serverID, name string) (entity popple.Entity, err error) {
 	srv, ok := n.entities[serverID]
 	if !ok {
-		return popple.Entity{}, errors.ErrNotFound
+		return popple.Entity{}, popple.ErrNotFound
 	}
 
 	e, ok := srv[name]
 	if !ok {
-		return popple.Entity{}, errors.ErrNotFound
+		return popple.Entity{}, popple.ErrNotFound
 	}
 
 	entity = popple.Entity{
@@ -138,12 +137,12 @@ func (n *Repository) Loserboard(serverID string, limit uint) (board []popple.Ent
 func (n *Repository) RemoveEntity(serverID, name string) error {
 	srv, ok := n.entities[serverID]
 	if !ok {
-		return errors.ErrNotFound
+		return popple.ErrNotFound
 	}
 
 	_, ok = srv[name]
 	if !ok {
-		return errors.ErrNotFound
+		return popple.ErrNotFound
 	}
 
 	delete(srv, name)
@@ -153,11 +152,11 @@ func (n *Repository) RemoveEntity(serverID, name string) error {
 func (n *Repository) UpdateEntity(entity popple.Entity) error {
 	srv, ok := n.entities[entity.ServerID]
 	if !ok {
-		return errors.ErrNotFound
+		return popple.ErrNotFound
 	}
 	temp, ok := srv[entity.Name]
 	if !ok {
-		return errors.ErrNotFound
+		return popple.ErrNotFound
 	}
 
 	temp.UpdatedAt = time.Now()
@@ -170,7 +169,7 @@ func (n *Repository) UpdateEntity(entity popple.Entity) error {
 func (n *Repository) Config(serverID string) (popple.Config, error) {
 	config, ok := n.configs[serverID]
 	if !ok {
-		return popple.Config{}, errors.ErrNotFound
+		return popple.Config{}, popple.ErrNotFound
 	}
 
 	c := popple.Config{
@@ -186,7 +185,7 @@ func (n *Repository) Config(serverID string) (popple.Config, error) {
 func (n *Repository) CreateConfig(config popple.Config) error {
 	_, ok := n.configs[config.ServerID]
 	if ok {
-		return errors.ErrAlreadyExists
+		return popple.ErrAlreadyExists
 	}
 
 	n.configs[config.ServerID] = Config{ServerID: config.ServerID}
@@ -196,7 +195,7 @@ func (n *Repository) CreateConfig(config popple.Config) error {
 func (n *Repository) UpdateConfig(config popple.Config) error {
 	c, ok := n.configs[config.ServerID]
 	if !ok {
-		return errors.ErrNotFound
+		return popple.ErrNotFound
 	}
 
 	c.NoAnnounce = config.NoAnnounce
