@@ -125,7 +125,7 @@ The only place I have left a placeholder value is for the Discord bot token,
 but otherwise I am using the default RabbitMQ credentials of `guest:guest` and
 the default root credentials for the MySQL docker container in this example.
 
-1. Create an env file to hold all of the necessary Popple configuration:
+1. [one-time-setup] Create an env file to hold all of the necessary Popple configuration:
 
 ```console
 cat > .poppleenv <<EOF
@@ -144,54 +144,39 @@ POPPLE_DB_USER=root
 POPPLE_DB_PASS=password
 POPPLE_DB_NAME=popple
 POPPLE_LISTEN_HEALTH=0.0.0.0:8080
+MYSQL_ROOT_PASSWORD=password
 EOF
 ```
 
-2. Create the Docker network so that all of the containers can communicate.
+2. [one-time-setup] Create a volume so that the MySQL database can persist beyond the Docker
+container's lifecycle:
 
 ```console
-$ docker network create popple
+$ docker volume create poppledata
 ```
 
-3. Create a MySQL database
+(Note, the docker-compose expects it to be named "poppledata")
+
+3. [one-time-setup] Set up the database:
 
 ```console
 $ docker volume create poppledata
 $ docker run -d \
     --name poppledb \
-    --network popple \
     --publish 3306:3306 \
     -v poppledata:/var/lib/mysql \
     -e MYSQL_ROOT_PASSWORD=password \
-    --restart=unless-stopped \
     mysql:8.0
 $ mysql -h 127.0.0.1 -u root -p
 mysql> CREATE DATABASE popple;
 mysql> USE popple;
 mysql> source ./cmd/popplesvc/.devel/schema.sql;
+$ docker stop poppledb
+$ docker rm poppledb
 ```
 
-4. Create a RabbitMQ instance
+4. Start it up:
 
 ```console
-$ docker run -d --name poppleevents --network popple --restart=unless-stopped rabbitmq:3.10
-```
-
-5. Finally, build and run popplebot and popplesvc:
-
-```console
-$ docker build -t popplesvc:latest -f Dockerfile.popple .
-$ docker build -t popplebot:latest -f Dockerfile.bot .
-$ docker run -d \
-    --name popplesvc \
-    --network popple \
-    --restart=unless-stopped \
-    --env-file .poppleenv \
-    popplesvc:latest
-$ docker run -d \
-    --name popplebot \
-    --network popple \
-    --restart=unless-stopped \
-    --env-file .poppleenv \
-    popplebot:latest
+$ docker-compose up -d
 ```

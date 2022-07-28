@@ -1,0 +1,41 @@
+services:
+  bot:
+    image: popplebot:latest
+    depends_on:
+      - eventbus
+    networks:
+      - popple
+    env_file: .poppleenv
+
+  svc:
+    image: popplesvc:latest
+    depends_on:
+      - db
+      - eventbus
+    networks:
+      - popple
+    env_file: .poppleenv
+
+  db:
+    image: mysql:8.0
+    hostname: poppledb
+    volumes:
+      - poppledata:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - popple
+    env_file: .poppleenv
+
+  eventbus:
+    image: rabbitmq:3.10
+    hostname: poppleevents
+    networks:
+      - popple
+
+networks:
+  popple: {}
+
+volumes:
+  poppledata:
+    external: true
