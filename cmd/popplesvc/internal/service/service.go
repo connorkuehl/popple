@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/connorkuehl/popple"
-	"github.com/connorkuehl/popple/event"
+	"github.com/connorkuehl/popple/internal/event"
 )
 
 type Service interface {

@@ -7,7 +7,7 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	"github.com/connorkuehl/popple/event"
+	"github.com/connorkuehl/popple/internal/event"
 )
 
 type RequestPublisher struct {

@@ -16,8 +16,7 @@ import (
 	"github.com/connorkuehl/popple/cmd/popplebot/internal/discord"
 	"github.com/connorkuehl/popple/cmd/popplebot/internal/rabbitmq"
 	"github.com/connorkuehl/popple/cmd/popplebot/internal/service"
-	"github.com/connorkuehl/popple/event"
-	internalevent "github.com/connorkuehl/popple/internal/event"
+	"github.com/connorkuehl/popple/internal/event"
 )
 
 var (
@@ -136,7 +135,7 @@ func run(ctx context.Context) error {
 	log.Println("connected to Discord")
 
 	messageStream := discord.MessageStream(ctx, session)
-	eventStream := internalevent.Stream(ctx, events)
+	eventStream := event.Stream(ctx, events)
 
 	var svc service.Service = service.New(
 		rabbitmq.NewRequestPublisher(ch, requestQueue.Name),

@@ -9,7 +9,7 @@ import (
 
 	"github.com/connorkuehl/popple"
 	"github.com/connorkuehl/popple/cmd/popplebot/internal/discord"
-	"github.com/connorkuehl/popple/event"
+	"github.com/connorkuehl/popple/internal/event"
 )
 
 var (

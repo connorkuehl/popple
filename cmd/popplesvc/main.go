@@ -17,8 +17,7 @@ import (
 	"github.com/connorkuehl/popple/cmd/popplesvc/internal/rabbitmq"
 	mysqlrepo "github.com/connorkuehl/popple/cmd/popplesvc/internal/repo/mysql"
 	"github.com/connorkuehl/popple/cmd/popplesvc/internal/service"
-	"github.com/connorkuehl/popple/event"
-	internalevent "github.com/connorkuehl/popple/internal/event"
+	"github.com/connorkuehl/popple/internal/event"
 )
 
 var (
@@ -131,7 +130,7 @@ func run(ctx context.Context) error {
 
 	log.Println("ready to dole out some karma")
 
-	eventLoop(ctx, svc, internalevent.Stream(ctx, requests))
+	eventLoop(ctx, svc, event.Stream(ctx, requests))
 	return nil
 }
 
