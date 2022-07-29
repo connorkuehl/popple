@@ -8,9 +8,11 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/sethvargo/go-retry"
 
 	"github.com/connorkuehl/popple"
 	"github.com/connorkuehl/popple/cmd/popplebot/internal/discord"
@@ -38,7 +40,19 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s", amqpUser, amqpPass, amqpHost, amqpPort))
+	connctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	var conn *amqp.Connection
+	err := retry.Fibonacci(connctx, 1*time.Second, func(ctx context.Context) error {
+		var err error
+		conn, err = amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s", amqpUser, amqpPass, amqpHost, amqpPort))
+		if err != nil {
+			log.Println("failed to connect to event bus, retrying")
+			return retry.RetryableError(err)
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}
