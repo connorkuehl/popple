@@ -47,6 +47,18 @@ func main() {
 }
 
 func run(ctx context.Context) error {
+	runManifest := map[string]interface{}{
+		"rabbitmq-host": amqpHost,
+		"rabbitmq-port": amqpPort,
+		"rabbitmq-user": amqpUser,
+		"db-host":       dbHost,
+		"db-port":       dbPort,
+		"db-user":       dbUser,
+	}
+
+	structured, _ := json.Marshal(runManifest)
+	log.Println(structured)
+
 	connctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
