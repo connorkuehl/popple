@@ -57,7 +57,7 @@ func run(ctx context.Context) error {
 	}
 
 	structured, _ := json.Marshal(runManifest)
-	log.Println(structured)
+	log.Println(string(structured))
 
 	connctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
