@@ -57,7 +57,7 @@ func run(ctx context.Context) error {
 		var err error
 		conn, err = amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s", amqpUser, amqpPass, amqpHost, amqpPort))
 		if err != nil {
-			log.Println("failed to connect to event bus, retrying")
+			log.Println("failed to connect to event bus,", err, "retrying")
 			return retry.RetryableError(err)
 		}
 		return nil
