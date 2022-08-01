@@ -63,12 +63,13 @@ func run(ctx context.Context) error {
 	defer cancel()
 
 	dbcfg := mysql.Config{
-		User:      dbUser,
-		Passwd:    dbPass,
-		Net:       "tcp",
-		Addr:      fmt.Sprintf("%s:%s", dbHost, dbPort),
-		DBName:    dbName,
-		ParseTime: true,
+		User:                 dbUser,
+		Passwd:               dbPass,
+		Net:                  "tcp",
+		Addr:                 fmt.Sprintf("%s:%s", dbHost, dbPort),
+		DBName:               dbName,
+		ParseTime:            true,
+		AllowNativePasswords: true,
 	}
 
 	var db *sql.DB
