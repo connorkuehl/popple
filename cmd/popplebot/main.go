@@ -166,23 +166,27 @@ func run(ctx context.Context) error {
 		popple.NewMux("@"+session.State.User.Username),
 	)
 
+	ctx, bail := context.WithCancel(ctx)
+
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
 	wg.Add(2)
-	go requestLoop(ctx, &wg, svc, messageStream)
-	go eventLoop(ctx, &wg, svc, eventStream)
+	go requestLoop(ctx, &wg, bail, svc, messageStream)
+	go eventLoop(ctx, &wg, bail, svc, eventStream)
 
-	return nil
+	return ctx.Err()
 }
 
 func requestLoop(
 	ctx context.Context,
 	wg *sync.WaitGroup,
+	bail context.CancelFunc,
 	svc service.Service,
 	messages <-chan discord.Message,
 ) {
 	defer wg.Done()
+	defer bail()
 	defer log.Println("request loop has exited")
 	log.Println("request loop is ready")
 
@@ -207,10 +211,12 @@ func requestLoop(
 func eventLoop(
 	ctx context.Context,
 	wg *sync.WaitGroup,
+	bail context.CancelFunc,
 	svc service.Service,
 	events <-chan event.Event,
 ) {
 	defer wg.Done()
+	defer bail()
 	defer log.Println("event loop has exited")
 	log.Println("event loop is ready")
 
