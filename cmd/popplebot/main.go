@@ -169,12 +169,12 @@ func run(ctx context.Context) error {
 	ctx, bail := context.WithCancel(ctx)
 
 	var wg sync.WaitGroup
-	defer wg.Wait()
 
 	wg.Add(2)
 	go requestLoop(ctx, &wg, bail, svc, messageStream)
 	go eventLoop(ctx, &wg, bail, svc, eventStream)
 
+	wg.Wait()
 	return ctx.Err()
 }
 
