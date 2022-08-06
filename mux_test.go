@@ -95,4 +95,52 @@ func TestMux(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("it requires a space before arguments to commands", func(t *testing.T) {
+		t.Skip("https://github.com/connorkuehl/popple/issues/123")
+
+		tests := []struct {
+			in    string
+			check func(got interface{})
+			want  string
+		}{
+			{
+				in:    "deer announce on",
+				check: func(got interface{}) { _ = got.(AnnounceHandler) },
+				want:  "on",
+			},
+			{
+				in:    "deer karma  person1",
+				check: func(got interface{}) { _ = got.(KarmaHandler) },
+				want:  "person1",
+			},
+			{
+				in:    "deer top 		2",
+				check: func(got interface{}) { _ = got.(LeaderboardHandler) },
+				want:  "2",
+			},
+			{
+				in:    "deer bot 12",
+				check: func(got interface{}) { _ = got.(LoserboardHandler) },
+				want:  "12",
+			},
+			{
+				in:    "deer announceon",
+				check: func(got interface{}) { _ = got.(BumpKarmaHandler) },
+				want:  "deer announceon",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.in, func(t *testing.T) {
+				m := NewMux("deer")
+				hnd, rem := m.Route(tt.in)
+				tt.check(hnd)
+
+				if rem != tt.want {
+					t.Errorf("want %q, got %q", tt.want, rem)
+				}
+			})
+		}
+	})
 }
