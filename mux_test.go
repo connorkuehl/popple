@@ -1,6 +1,8 @@
 package popple
 
 import (
+	"bufio"
+	"strings"
 	"testing"
 )
 
@@ -8,7 +10,14 @@ func TestMux(t *testing.T) {
 	t.Run("command prefix is stripped from message", func(t *testing.T) {
 		mux := NewMux("@colt")
 		_, got := mux.Route("@colt announce on")
-		want := " on"
+
+		wordscanner := bufio.NewScanner(strings.NewReader(got))
+		wordscanner.Split(bufio.ScanWords)
+
+		wordscanner.Scan()
+		got = wordscanner.Text()
+
+		want := "on"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
