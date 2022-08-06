@@ -43,4 +43,47 @@ func TestMux(t *testing.T) {
 		got, _ := m.Route("wolf seal oxen")
 		_ = got.(BumpKarmaHandler)
 	})
+
+	t.Run("it allows any amount of whitespace between the name and cmd", func(t *testing.T) {
+		t.Skip("https://github.com/connorkuehl/popple/issues/112")
+
+		tests := []struct {
+			in    string
+			check func(got interface{})
+		}{
+			{
+				in: "oryx  announce",
+				check: func(got interface{}) {
+					_ = got.(AnnounceHandler)
+				},
+			},
+			{
+				in: "oryx       karma",
+				check: func(got interface{}) {
+					_ = got.(KarmaHandler)
+				},
+			},
+			{
+				in: "oryx             top",
+				check: func(got interface{}) {
+					_ = got.(LeaderboardHandler)
+				},
+			},
+			{
+				in: "oryx     bot",
+				check: func(got interface{}) {
+					_ = got.(LoserboardHandler)
+				},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.in, func(t *testing.T) {
+				m := NewMux("oryx")
+
+				got, _ := m.Route(tt.in)
+				tt.check(got)
+			})
+		}
+	})
 }
