@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/repr"
@@ -14,6 +16,52 @@ import (
 	"github.com/connorkuehl/popple/cmd/popplebot/internal/rabbitmq/rabbitmqtest"
 	"github.com/connorkuehl/popple/internal/event"
 )
+
+func TestHandleCheckedKarma(t *testing.T) {
+	t.Run("it emits karma counts for requested entities", func(t *testing.T) {
+		disc := discordtest.NewResponseRecorder()
+		svc := New(
+			nil,
+			disc,
+			nil,
+		)
+
+		input := event.CheckedKarma{
+			ReplyTo: event.ReplyTo{
+				ChannelID: "2324",
+			},
+			Who: map[string]int64{
+				"poe the potato pirate":       20,
+				"oakley the golden retriever": 9001,
+			},
+		}
+
+		err := svc.HandleCheckedKarma(context.Background(), &input)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if len(disc.Responses) != 1 {
+			t.Errorf("expected 1 response, got %s", repr.String(disc.Responses))
+		}
+
+		rsp := disc.Responses[0].Message
+		if rsp.ChannelID != "2324" {
+			t.Errorf("expected ChannelID %q, got %q", "2324", rsp.ChannelID)
+		}
+
+		want := map[string]int64{
+			"poe the potato pirate":       20,
+			"oakley the golden retriever": 9001,
+		}
+		for who, amt := range want {
+			tuple := map[string]int64{who: amt}
+			if !hasKarmaCounts(rsp.Contents, tuple) {
+				t.Errorf("expected to find karma details for %s in message %q", repr.String(tuple), rsp.Contents)
+			}
+		}
+	})
+}
 
 func TestHandleChangedAnnounce(t *testing.T) {
 	t.Run("it reacts with a checkmark when it changes announce settings", func(t *testing.T) {
@@ -357,4 +405,13 @@ func TestHandleDiscordMessage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func hasKarmaCounts(s string, who map[string]int64) bool {
+	for who, amt := range who {
+		if !strings.Contains(s, fmt.Sprintf("%s has %d karma", who, amt)) {
+			return false
+		}
+	}
+	return true
 }
