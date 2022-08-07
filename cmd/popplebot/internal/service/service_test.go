@@ -95,6 +95,55 @@ func TestHandleChangedAnnounce(t *testing.T) {
 }
 
 func TestHandleChangedKarma(t *testing.T) {
+	t.Run("it announces new karma levels when they are changed", func(t *testing.T) {
+		disc := discordtest.NewResponseRecorder()
+		svc := New(
+			nil,
+			disc,
+			nil,
+		)
+
+		input := event.ChangedKarma{
+			ReplyTo: event.ReplyTo{
+				ChannelID: "1010",
+			},
+			Who: map[string]int64{
+				"koala":   10,
+				"grizzly": 20,
+				"polar":   30,
+				"brown":   40,
+			},
+			Announce: true,
+		}
+
+		err := svc.HandleChangedKarma(context.Background(), &input)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if len(disc.Responses) != 1 {
+			t.Errorf("expected 1 response, got %s", repr.String(disc.Responses))
+		}
+
+		rsp := disc.Responses[0].Message
+		if rsp.ChannelID != "1010" {
+			t.Errorf("expected ChannelID %q, got %q", "2324", rsp.ChannelID)
+		}
+
+		want := map[string]int64{
+			"koala":   10,
+			"grizzly": 20,
+			"polar":   30,
+			"brown":   40,
+		}
+		for who, amt := range want {
+			tuple := map[string]int64{who: amt}
+			if !hasKarmaCounts(rsp.Contents, tuple) {
+				t.Errorf("expected to find karma details for %s in message %q", repr.String(tuple), rsp.Contents)
+			}
+		}
+	})
+
 	t.Run("it doesn't announce if it is configured not to", func(t *testing.T) {
 		disc := discordtest.NewResponseRecorder()
 		svc := New(
