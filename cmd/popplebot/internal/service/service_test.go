@@ -15,6 +15,37 @@ import (
 	"github.com/connorkuehl/popple/internal/event"
 )
 
+func TestHandleChangedAnnounce(t *testing.T) {
+	t.Run("it reacts with a checkmark when it changes announce settings", func(t *testing.T) {
+		disc := discordtest.NewResponseRecorder()
+		svc := New(
+			nil,
+			disc,
+			nil,
+		)
+
+		input := event.ChangedAnnounce{
+			ReactTo: event.ReactTo{
+				ChannelID: "5678",
+				MessageID: "2011",
+			},
+		}
+
+		err := svc.HandleChangedAnnounce(context.Background(), &input)
+		if err != nil {
+			t.Error(err)
+		}
+
+		want := []discordtest.Response{
+			{Reaction: &discordtest.Reaction{MessageID: "2011", ChannelID: "5678", EmojiID: "✅"}},
+		}
+
+		if !reflect.DeepEqual(want, disc.Responses) {
+			t.Errorf("want responses %s, got responses %s", repr.String(want), repr.String(disc.Responses))
+		}
+	})
+}
+
 func TestHandleChangedKarma(t *testing.T) {
 	t.Run("it doesn't announce if it is configured not to", func(t *testing.T) {
 		disc := discordtest.NewResponseRecorder()
