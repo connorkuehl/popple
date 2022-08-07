@@ -15,6 +15,36 @@ import (
 	"github.com/connorkuehl/popple/internal/event"
 )
 
+func TestHandleChangedKarma(t *testing.T) {
+	t.Run("it doesn't announce if it is configured not to", func(t *testing.T) {
+		disc := discordtest.NewResponseRecorder()
+		svc := New(
+			nil,
+			disc,
+			nil,
+		)
+
+		input := event.ChangedKarma{
+			ReplyTo: event.ReplyTo{
+				ChannelID: "4321",
+			},
+			Who:      map[string]int64{"hjkl": 1},
+			Announce: false,
+		}
+
+		err := svc.HandleChangedKarma(context.Background(), &input)
+		if err != nil {
+			t.Error(err)
+		}
+
+		got := len(disc.Responses)
+		want := 0
+		if got != want {
+			t.Errorf("want %d responses, got %s", want, repr.String(disc.Responses))
+		}
+	})
+}
+
 func TestHandleLeaderboard(t *testing.T) {
 	t.Run("it doesn't reply if the leaderboard is empty", func(t *testing.T) {
 		t.Skip("https://github.com/connorkuehl/popple/issues/118")
