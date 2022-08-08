@@ -67,6 +67,10 @@ func (s *service) HandleCheckedKarma(ctx context.Context, rsp *event.CheckedKarm
 }
 
 func (s *service) HandleCheckedLeaderboard(ctx context.Context, rsp *event.CheckedLeaderboard) error {
+	if len(rsp.Board) == 0 {
+		return nil
+	}
+
 	var r strings.Builder
 	err := templateBoard.Execute(&r, rsp.Board)
 	if err != nil {
@@ -78,6 +82,10 @@ func (s *service) HandleCheckedLeaderboard(ctx context.Context, rsp *event.Check
 }
 
 func (s *service) HandleCheckedLoserboard(ctx context.Context, rsp *event.CheckedLoserboard) error {
+	if len(rsp.Board) == 0 {
+		return nil
+	}
+
 	var r strings.Builder
 	err := templateBoard.Execute(&r, rsp.Board)
 	if err != nil {
