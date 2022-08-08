@@ -175,7 +175,6 @@ func TestHandleChangedKarma(t *testing.T) {
 
 func TestHandleLeaderboard(t *testing.T) {
 	t.Run("it doesn't reply if the leaderboard is empty", func(t *testing.T) {
-		t.Skip("https://github.com/connorkuehl/popple/issues/118")
 
 		disc := discordtest.NewResponseRecorder()
 		svc := New(
@@ -206,7 +205,6 @@ func TestHandleLeaderboard(t *testing.T) {
 
 func TestHandleLoserboard(t *testing.T) {
 	t.Run("it doesn't reply if the loserboard is empty", func(t *testing.T) {
-		t.Skip("https://github.com/connorkuehl/popple/issues/118")
 
 		disc := discordtest.NewResponseRecorder()
 		svc := New(
