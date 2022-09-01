@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/alecthomas/repr v0.1.0
-	github.com/bwmarrin/discordgo v0.25.0
+	github.com/bwmarrin/discordgo v0.26.1
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/rabbitmq/amqp091-go v1.4.0
 	github.com/sethvargo/go-retry v0.2.3
