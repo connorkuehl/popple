@@ -157,7 +157,8 @@ $ docker volume create poppledata
 
 (Note, the docker-compose expects it to be named "poppledata")
 
-3. [one-time-setup] Set up the database:
+3. [one-time-setup] Set up the database. Note, this requires the [migrate](
+https://github.com/golang-migrate/migrate) tool to be installed.
 
 ```console
 $ docker volume create poppledata
@@ -169,8 +170,8 @@ $ docker run -d \
     mysql:8.0
 $ mysql -h 127.0.0.1 -u root -p
 mysql> CREATE DATABASE popple;
-mysql> USE popple;
-mysql> source ./cmd/popplesvc/.devel/schema.sql;
+$ export POPPLEDSN='mysql://root:password@tcp(127.0.0.1:3306)/popple'
+$ migrate -path=./migrations -database=$POPPLEDSN up
 $ docker stop poppledb
 $ docker rm poppledb
 ```
