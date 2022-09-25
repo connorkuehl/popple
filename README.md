@@ -102,7 +102,8 @@ The `go` toolchain should download the dependencies and build Popple.
 ### Pre-requisites:
 
 1. A valid Discord bot token so that Popple can connect to and interact
-with Discord.
+with Discord. **Make sure "Message Content Intent" is enabled on the Bot
+settings page.**
 1. A MySQL database for persisting karma counts and per-server configuration.
 1. A RabbitMQ instance so that Popple components can exchange messages.
 
