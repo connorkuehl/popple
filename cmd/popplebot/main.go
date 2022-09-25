@@ -150,6 +150,7 @@ func run(ctx context.Context) error {
 		return err
 	}
 
+	session.Identify.Intents |= discordgo.IntentMessageContent
 	err = session.Open()
 	if err != nil {
 		return err
