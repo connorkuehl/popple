@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: [Dockerfile.popple, Dockerfile.bot]
+        dockerfile: [Dockerfile.svc, Dockerfile.bot]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Docker Buildx

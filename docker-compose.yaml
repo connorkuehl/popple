@@ -5,22 +5,22 @@ services:
       context: .
       dockerfile: Dockerfile.bot
     depends_on:
-      - eventbus
+      - svc
     networks:
       - popple
-    env_file: .poppleenv
+    env_file: .envrc
 
   svc:
+    hostname: popplesvc
     image: popplesvc:latest
     build:
       context: .
-      dockerfile: Dockerfile.popple
+      dockerfile: Dockerfile.svc
     depends_on:
       - db
-      - eventbus
     networks:
       - popple
-    env_file: .poppleenv
+    env_file: .envrc
 
   db:
     image: mysql:8.0
@@ -31,13 +31,7 @@ services:
       - "3306:3306"
     networks:
       - popple
-    env_file: .poppleenv
-
-  eventbus:
-    image: rabbitmq:3.10
-    hostname: poppleevents
-    networks:
-      - popple
+    env_file: .envrc
 
 networks:
   popple: {}

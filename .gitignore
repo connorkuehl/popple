@@ -12,3 +12,6 @@ popple.sqlite
 c.out
 c.html
 .poppleenv
+.envrc
+/popplesvc
+/popplebot

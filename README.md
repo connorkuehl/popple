@@ -105,14 +105,13 @@ The `go` toolchain should download the dependencies and build Popple.
 with Discord. **Make sure "Message Content Intent" is enabled on the Bot
 settings page.**
 1. A MySQL database for persisting karma counts and per-server configuration.
-1. A RabbitMQ instance so that Popple components can exchange messages.
 
 There are currently two application-layer components:
 
 1. popplebot (./cmd/popplebot) is Popple's point-of-presence on Discord. It
 reads and responds to messages in the Discord servers that it is in. If a
-message requires any application logic, it submits a request to RabbitMQ
-so that an instance of popplesvc can take care of it.
+message requires any application logic, it submits a request to the popplesvc
+component.
 1. popplesvc (./cmd/popplesvc) is where the main application-layer logic takes
 place. It processes requests from popplebot and persists any necessary state
 to the database.
@@ -122,31 +121,19 @@ to the database.
 Note, the following configuration is sufficient for local development, but
 will require changes in order to be secure for a production deployment.
 
-The only place I have left a placeholder value is for the Discord bot token,
-but otherwise I am using the default RabbitMQ credentials of `guest:guest` and
-the default root credentials for the MySQL docker container in this example.
-
 1. [one-time-setup] Create an env file to hold all of the necessary Popple configuration:
 
 ```console
-cat > .poppleenv <<EOF
-POPPLEBOT_AMQP_HOST=poppleevents
-POPPLEBOT_AMQP_PORT=5672
-POPPLEBOT_AMQP_USER=guest
-POPPLEBOT_AMQP_PASS=guest
-POPPLEBOT_DISCORD_TOKEN=<YOUR_SECRET_DISCORD_TOKEN>
-POPPLE_AMQP_HOST=poppleevents
-POPPLE_AMQP_PORT=5672
-POPPLE_AMQP_USER=guest
-POPPLE_AMQP_PASS=guest
-POPPLE_DB_HOST=poppledb
-POPPLE_DB_PORT=3306
-POPPLE_DB_USER=root
-POPPLE_DB_PASS=password
-POPPLE_DB_NAME=popple
-POPPLE_LISTEN_HEALTH=0.0.0.0:8080
-MYSQL_ROOT_PASSWORD=password
+$ cat > .envrc <<EOF
+export POPPLEBOT_DISCORD_TOKEN=YOUR_SECRET_BOT_TOKEN
+export POPPLEBOT_POPPLE_ENDPOINT="http://popplesvc:8080"
+export POPPLE_DB_NAME=popple
+export POPPLE_DB_USER=root
+export POPPLE_DB_PASS=password
+export POPPLE_DB_PORT=3306
+export POPPLE_DB_HOST=poppledb
 EOF
+$ direnv allow # or source .envrc if direnv is not installed
 ```
 
 2. [one-time-setup] Create a volume so that the MySQL database can persist beyond the Docker

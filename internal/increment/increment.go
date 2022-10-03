@@ -1,21 +1,21 @@
-package parse
+package increment
 
 import (
 	"strings"
 	"unicode"
 )
 
-func Subjects(s string) map[string]int64 {
-	subjects := make(map[string]int64)
+func ParseAll(s string) map[string]int64 {
+	increments := make(map[string]int64)
 	_, items := lex([]rune(s))
 	for i := range items {
-		name, incr := parseSubject(i)
+		name, incr := parseIncrement(i)
 		if len(name) == 0 {
 			continue
 		}
-		subjects[name] += incr
+		increments[name] += incr
 	}
-	return subjects
+	return increments
 }
 
 func lex(input []rune) (*lexer, chan item) {
@@ -28,18 +28,18 @@ func lex(input []rune) (*lexer, chan item) {
 	return l, l.items
 }
 
-func parseSubject(i item) (name string, increment int64) {
+func parseIncrement(i item) (name string, increment int64) {
 	switch i.kind {
 	case itemText:
-		return parseSubjectPlain(i)
+		return parseIncrementPlain(i)
 	case itemTextInParens:
-		return parseSubjectParens(i)
+		return parseIncrementInParens(i)
 	default:
 		return "", 0
 	}
 }
 
-func parseSubjectPlain(i item) (name string, increment int64) {
+func parseIncrementPlain(i item) (name string, increment int64) {
 	name = string(i.value)
 	// TODO: get rid of this
 	name = strings.TrimPrefix(name, "@")
@@ -57,7 +57,7 @@ func parseSubjectPlain(i item) (name string, increment int64) {
 	return name, karma
 }
 
-func parseSubjectParens(i item) (name string, increment int64) {
+func parseIncrementInParens(i item) (name string, increment int64) {
 	name = string(i.value)
 	karma := int64(0)
 	switch {
