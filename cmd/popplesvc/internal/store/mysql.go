@@ -84,7 +84,9 @@ func (s *MySQLStore) ChangeKarma(ctx context.Context, serverID string, increment
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	for who, karma := range increments {
 		_, err := tx.ExecContext(ctx, mysqlChangeKarma, serverID, who, karma, karma)
