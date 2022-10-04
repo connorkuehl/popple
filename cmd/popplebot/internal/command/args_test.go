@@ -73,6 +73,14 @@ func TestParseChangeKarmaArgs(t *testing.T) {
 				"c and d": 1,
 			},
 		},
+		{
+			// The g should be dropped from the increments map.
+			input: "e-- f++ g",
+			want: popple.Increments{
+				"e": -1,
+				"f": 1,
+			},
+		},
 	}
 
 	for _, tt := range tests {

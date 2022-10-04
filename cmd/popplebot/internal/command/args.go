@@ -53,6 +53,16 @@ type ChangeKarmaArgs struct {
 
 func (args *ChangeKarmaArgs) ParseArg(s string) error {
 	args.Increments = increment.ParseAll(s)
+
+	filtered := make(popple.Increments)
+	for who, inc := range args.Increments {
+		if inc == 0 {
+			continue
+		}
+		filtered[who] = inc
+	}
+
+	args.Increments = filtered
 	return nil
 }
 
