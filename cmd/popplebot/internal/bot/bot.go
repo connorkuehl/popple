@@ -24,6 +24,7 @@ var log = logrus.StandardLogger().WithFields(logrus.Fields{
 	"component": "bot",
 })
 
+//go:generate mockery --name PoppleClient --case underscore --with-expecter --testonly --inpackage
 type PoppleClient interface {
 	Board(ctx context.Context, serverID string, ord popple.BoardOrder, limit uint) (popple.Board, error)
 	ChangeKarma(ctx context.Context, serverID string, increments popple.Increments) (popple.Increments, error)
@@ -32,6 +33,7 @@ type PoppleClient interface {
 	PutConfig(ctx context.Context, config *popple.Config) error
 }
 
+//go:generate mockery --name Discord --case underscore --with-expecter --testonly --inpackage
 type Discord interface {
 	SendMessageToChannel(channelID string, msg string) error
 	ReactToMessageWithEmoji(channelID, messageID, emojiID string) error
