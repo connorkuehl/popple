@@ -129,3 +129,47 @@ func TestCheckKarmaArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestBoardArgs(t *testing.T) {
+	type result struct {
+		args BoardArgs
+		err  error
+	}
+
+	tests := []struct {
+		input string
+		want  result
+	}{
+		{
+			input: "",
+			want:  result{args: BoardArgs{Limit: defaultLimit}},
+		},
+		{
+			input: "3",
+			want:  result{args: BoardArgs{Limit: 3}},
+		},
+		{
+			input: "-1",
+			want:  result{err: ErrInvalidArgument},
+		},
+		{
+			input: "nonsense",
+			want:  result{err: ErrInvalidArgument},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			var got BoardArgs
+			err := got.ParseArg(tt.input)
+
+			if !errors.Is(err, tt.want.err) {
+				t.Errorf("want err=%v, got err=%v", tt.want.err, err)
+			}
+
+			if got != tt.want.args {
+				t.Errorf("want arg=%v, got arg=%v", tt.want.args, got)
+			}
+		})
+	}
+}
