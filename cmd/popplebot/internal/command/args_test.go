@@ -3,6 +3,7 @@ package command
 import (
 	"errors"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/connorkuehl/popple"
@@ -94,6 +95,36 @@ func TestParseChangeKarmaArgs(t *testing.T) {
 
 			if !reflect.DeepEqual(tt.want, got.Increments) {
 				t.Errorf("want %v, got %v", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestCheckKarmaArgs(t *testing.T) {
+	tests := []struct {
+		input string
+		want  []string
+	}{
+		{
+			input: "a b (c and d)",
+			want:  []string{"a", "b", "c and d"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			var got CheckKarmaArgs
+
+			err := got.ParseArg(tt.input)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			sort.Strings(tt.want)
+			sort.Strings(got.Who)
+
+			if !reflect.DeepEqual(tt.want, got.Who) {
+				t.Errorf("want %v, got %v", tt.want, got.Who)
 			}
 		})
 	}
