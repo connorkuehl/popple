@@ -20,15 +20,15 @@ func NewMySQLStore(db *sql.DB) *MySQLStore {
 
 func (s *MySQLStore) Board(ctx context.Context, serverID string, ord popple.BoardOrder, limit uint) (popple.Board, error) {
 	const (
-		mysqlBoardAsc  = `SELECT name, karma FROM entities WHERE server_id=? ORDER BY karma ASC LIMIT ?`
-		mysqlBoardDesc = `SELECT name, karma FROM entities WHERE server_id=? ORDER BY karma DESC LIMIT ?`
+		boardAscSQL  = `SELECT name, karma FROM entities WHERE server_id=? ORDER BY karma ASC LIMIT ?`
+		boardDescSQL = `SELECT name, karma FROM entities WHERE server_id=? ORDER BY karma DESC LIMIT ?`
 	)
 
-	ordSQL := mysqlBoardAsc
+	ordSQL := boardAscSQL
 	switch ord {
 	case popple.BoardOrderAsc:
 	case popple.BoardOrderDsc:
-		ordSQL = mysqlBoardDesc
+		ordSQL = boardDescSQL
 	default:
 		return nil, errors.New("invalid order")
 	}
@@ -80,13 +80,13 @@ func (s *MySQLStore) ChangeKarma(ctx context.Context, serverID string, increment
 		}
 	}
 
-	const mysqlGetKarma = `SELECT karma FROM entities WHERE server_id=? AND name=?`
+	const getKarmaSQL = `SELECT karma FROM entities WHERE server_id=? AND name=?`
 
 	newLevels := make(popple.Increments)
 	var garbageCollect []string
 	for who := range increments {
 		var karma int64
-		err := tx.QueryRowContext(ctx, mysqlGetKarma, serverID, who).Scan(&karma)
+		err := tx.QueryRowContext(ctx, getKarmaSQL, serverID, who).Scan(&karma)
 		if err != nil {
 			return nil, err
 		}
@@ -97,10 +97,10 @@ func (s *MySQLStore) ChangeKarma(ctx context.Context, serverID string, increment
 		}
 	}
 
-	const mysqlRemoveSubject = `DELETE FROM entities WHERE server_id=? AND name=?`
+	const removeSubjectSQL = `DELETE FROM entities WHERE server_id=? AND name=?`
 
 	for _, who := range garbageCollect {
-		_, err := tx.ExecContext(ctx, mysqlRemoveSubject, serverID, who)
+		_, err := tx.ExecContext(ctx, removeSubjectSQL, serverID, who)
 		if err != nil {
 			return nil, err
 		}
@@ -112,11 +112,11 @@ func (s *MySQLStore) ChangeKarma(ctx context.Context, serverID string, increment
 func (s *MySQLStore) CheckKarma(ctx context.Context, serverID string, who []string) (map[string]int64, error) {
 	increments := make(map[string]int64)
 
-	const mysqlCheckKarma = `SELECT karma FROM entities WHERE server_id=? AND name=?`
+	const checkKarmaSQL = `SELECT karma FROM entities WHERE server_id=? AND name=?`
 
 	for _, name := range who {
 		var karma int64
-		err := s.db.QueryRowContext(ctx, mysqlCheckKarma, serverID, name).Scan(&karma)
+		err := s.db.QueryRowContext(ctx, checkKarmaSQL, serverID, name).Scan(&karma)
 		if errors.Is(err, sql.ErrNoRows) {
 			err = nil
 		}
@@ -133,9 +133,9 @@ func (s *MySQLStore) CheckKarma(ctx context.Context, serverID string, who []stri
 func (s *MySQLStore) Config(ctx context.Context, serverID string) (*popple.Config, error) {
 	cfg := popple.Config{ServerID: serverID}
 
-	const mysqlGetConfig = `SELECT no_announce FROM configs WHERE server_id=?`
+	const getConfigSQL = `SELECT no_announce FROM configs WHERE server_id=?`
 
-	err := s.db.QueryRowContext(ctx, mysqlGetConfig, serverID).Scan(&cfg.NoAnnounce)
+	err := s.db.QueryRowContext(ctx, getConfigSQL, serverID).Scan(&cfg.NoAnnounce)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = nil
 	}
@@ -147,7 +147,7 @@ func (s *MySQLStore) Config(ctx context.Context, serverID string) (*popple.Confi
 }
 
 func (s *MySQLStore) PutConfig(ctx context.Context, config *popple.Config) error {
-	const mysqlPutConfig = `
+	const putConfigSQL = `
 	INSERT INTO configs (
 		server_id,
 		no_announce
@@ -156,7 +156,7 @@ func (s *MySQLStore) PutConfig(ctx context.Context, config *popple.Config) error
 		?
 	) ON DUPLICATE KEY UPDATE updated_at=NOW(), no_announce=?`
 
-	_, err := s.db.ExecContext(ctx, mysqlPutConfig, config.ServerID, config.NoAnnounce, config.NoAnnounce)
+	_, err := s.db.ExecContext(ctx, putConfigSQL, config.ServerID, config.NoAnnounce, config.NoAnnounce)
 	if err != nil {
 		return err
 	}
