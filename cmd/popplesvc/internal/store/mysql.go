@@ -8,37 +8,6 @@ import (
 	"github.com/connorkuehl/popple"
 )
 
-var mysqlChangeKarma = `
-INSERT INTO entities (
-	server_id,
-	name,
-	karma
-) VALUES (
-	?,
-	?,
-	karma+?
-) ON DUPLICATE KEY UPDATE updated_at=NOW(), karma=karma+?`
-
-var mysqlGetKarma = `SELECT karma FROM entities WHERE server_id=? AND name=?`
-
-var mysqlRemoveSubject = `DELETE FROM entities WHERE server_id=? AND name=?`
-
-var mysqlGetConfig = `SELECT no_announce FROM configs WHERE server_id=?`
-
-var mysqlPutConfig = `
-INSERT INTO configs (
-	server_id,
-	no_announce
-) VALUES (
-	?,
-	?
-) ON DUPLICATE KEY UPDATE updated_at=NOW(), no_announce=?`
-
-var mysqlBoardAsc = `SELECT name, karma FROM entities WHERE server_id=? ORDER BY karma ASC LIMIT ?`
-var mysqlBoardDesc = `SELECT name, karma FROM entities WHERE server_id=? ORDER BY karma DESC LIMIT ?`
-
-var mysqlCheckKarma = `SELECT karma FROM entities WHERE server_id=? AND name=?`
-
 type MySQLStore struct {
 	db *sql.DB
 }
@@ -50,6 +19,11 @@ func NewMySQLStore(db *sql.DB) *MySQLStore {
 }
 
 func (s *MySQLStore) Board(ctx context.Context, serverID string, ord popple.BoardOrder, limit uint) (popple.Board, error) {
+	const (
+		mysqlBoardAsc  = `SELECT name, karma FROM entities WHERE server_id=? ORDER BY karma ASC LIMIT ?`
+		mysqlBoardDesc = `SELECT name, karma FROM entities WHERE server_id=? ORDER BY karma DESC LIMIT ?`
+	)
+
 	ordSQL := mysqlBoardAsc
 	switch ord {
 	case popple.BoardOrderAsc:
@@ -88,12 +62,25 @@ func (s *MySQLStore) ChangeKarma(ctx context.Context, serverID string, increment
 		_ = tx.Rollback()
 	}()
 
+	const changeKarmaSQL = `
+	INSERT INTO entities (
+		server_id,
+		name,
+		karma
+	) VALUES (
+		?,
+		?,
+		karma+?
+	) ON DUPLICATE KEY UPDATE updated_at=NOW(), karma=karma+?`
+
 	for who, karma := range increments {
-		_, err := tx.ExecContext(ctx, mysqlChangeKarma, serverID, who, karma, karma)
+		_, err := tx.ExecContext(ctx, changeKarmaSQL, serverID, who, karma, karma)
 		if err != nil {
 			return nil, err
 		}
 	}
+
+	const mysqlGetKarma = `SELECT karma FROM entities WHERE server_id=? AND name=?`
 
 	newLevels := make(popple.Increments)
 	var garbageCollect []string
@@ -110,6 +97,8 @@ func (s *MySQLStore) ChangeKarma(ctx context.Context, serverID string, increment
 		}
 	}
 
+	const mysqlRemoveSubject = `DELETE FROM entities WHERE server_id=? AND name=?`
+
 	for _, who := range garbageCollect {
 		_, err := tx.ExecContext(ctx, mysqlRemoveSubject, serverID, who)
 		if err != nil {
@@ -122,6 +111,8 @@ func (s *MySQLStore) ChangeKarma(ctx context.Context, serverID string, increment
 
 func (s *MySQLStore) CheckKarma(ctx context.Context, serverID string, who []string) (map[string]int64, error) {
 	increments := make(map[string]int64)
+
+	const mysqlCheckKarma = `SELECT karma FROM entities WHERE server_id=? AND name=?`
 
 	for _, name := range who {
 		var karma int64
@@ -142,6 +133,8 @@ func (s *MySQLStore) CheckKarma(ctx context.Context, serverID string, who []stri
 func (s *MySQLStore) Config(ctx context.Context, serverID string) (*popple.Config, error) {
 	cfg := popple.Config{ServerID: serverID}
 
+	const mysqlGetConfig = `SELECT no_announce FROM configs WHERE server_id=?`
+
 	err := s.db.QueryRowContext(ctx, mysqlGetConfig, serverID).Scan(&cfg.NoAnnounce)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = nil
@@ -154,6 +147,15 @@ func (s *MySQLStore) Config(ctx context.Context, serverID string) (*popple.Confi
 }
 
 func (s *MySQLStore) PutConfig(ctx context.Context, config *popple.Config) error {
+	const mysqlPutConfig = `
+	INSERT INTO configs (
+		server_id,
+		no_announce
+	) VALUES (
+		?,
+		?
+	) ON DUPLICATE KEY UPDATE updated_at=NOW(), no_announce=?`
+
 	_, err := s.db.ExecContext(ctx, mysqlPutConfig, config.ServerID, config.NoAnnounce, config.NoAnnounce)
 	if err != nil {
 		return err
