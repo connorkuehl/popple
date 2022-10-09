@@ -30,7 +30,7 @@ func NewRouter(name string) *Router {
 	// the prefix requires the message to be prefaced with the bot's name
 	prefix := `^(` + r.name + `)`
 	for cmd, ctor := range handlers {
-		r.handlers[regexp.MustCompile(prefix+" "+cmd)] = ctor
+		r.handlers[regexp.MustCompile(prefix+"\\s+"+cmd)] = ctor
 	}
 
 	return &r
