@@ -47,6 +47,34 @@ func TestRoute(t *testing.T) {
 				remainder: "some text",
 			},
 		},
+		{
+			input: "popple    announce off",
+			want: result{
+				typecheck: func(a ArgParser) { _ = a.(*SetAnnounceArgs) },
+				remainder: " off",
+			},
+		},
+		{
+			input: "popple          karma tomato",
+			want: result{
+				typecheck: func(a ArgParser) { _ = a.(*CheckKarmaArgs) },
+				remainder: " tomato",
+			},
+		},
+		{
+			input: "popple     bot",
+			want: result{
+				typecheck: func(a ArgParser) { _ = a.(*LoserboardArgs) },
+				remainder: "",
+			},
+		},
+		{
+			input: "popple                 top 3",
+			want: result{
+				typecheck: func(a ArgParser) { _ = a.(*LeaderboardArgs) },
+				remainder: " 3",
+			},
+		},
 	}
 
 	for _, tt := range tests {
