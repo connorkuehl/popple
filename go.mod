@@ -6,7 +6,7 @@ require (
 	github.com/bwmarrin/discordgo v0.26.1
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/jaswdr/faker v1.15.0
+	github.com/jaswdr/faker v1.16.0
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.1
