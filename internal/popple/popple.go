@@ -2,14 +2,19 @@ package popple
 
 type Increments map[string]int64
 
-type Config struct {
-	ServerID   string `json:"server_id"`
-	NoAnnounce bool   `json:"no_announce"`
+type Entity struct {
+	Name  string
+	Karma int64
+}
+
+type ServerConfig struct {
+	ServerID   string
+	NoAnnounce bool
 }
 
 type BoardEntry struct {
-	Who   string `json:"who"`
-	Karma int64  `json:"karma"`
+	Who   string
+	Karma int64
 }
 
 type Board []BoardEntry

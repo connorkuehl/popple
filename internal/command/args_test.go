@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/connorkuehl/popple"
+	"github.com/connorkuehl/popple/internal/popple"
 )
 
 func TestParseSetAnnounceArgs(t *testing.T) {

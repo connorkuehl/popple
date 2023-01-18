@@ -6,8 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/connorkuehl/popple"
-	"github.com/connorkuehl/popple/internal/increment"
+	"github.com/connorkuehl/popple/internal/popple"
 )
 
 var (
@@ -52,7 +51,7 @@ type ChangeKarmaArgs struct {
 }
 
 func (args *ChangeKarmaArgs) ParseArg(s string) error {
-	args.Increments = increment.ParseAll(s)
+	args.Increments = popple.ParseIncrements(s)
 
 	filtered := make(popple.Increments)
 	for who, inc := range args.Increments {
@@ -73,7 +72,7 @@ type CheckKarmaArgs struct {
 func (args *CheckKarmaArgs) ParseArg(s string) error {
 	var who []string
 
-	increments := increment.ParseAll(s)
+	increments := popple.ParseIncrements(s)
 	for name := range increments {
 		who = append(who, name)
 	}

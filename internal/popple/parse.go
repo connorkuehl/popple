@@ -1,12 +1,12 @@
-package increment
+package popple
 
 import (
 	"strings"
 	"unicode"
 )
 
-func ParseAll(s string) map[string]int64 {
-	increments := make(map[string]int64)
+func ParseIncrements(s string) Increments {
+	increments := make(Increments)
 	_, items := lex([]rune(s))
 	for i := range items {
 		name, incr := parseIncrement(i)
