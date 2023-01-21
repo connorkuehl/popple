@@ -54,7 +54,7 @@ func (d *DB) PutConfig(ctx context.Context, config popple.ServerConfig) error {
 	}
 	defer tx.Rollback()
 
-	query := `UPDATE configs SET no_announce = $1, updated_at = datetime('now') WHERE server_id = $2 LIMIT 1`
+	query := `UPDATE configs SET no_announce = $1, updated_at = datetime('now') WHERE server_id = $2`
 	args := []any{config.NoAnnounce, config.ServerID}
 	res, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
@@ -86,7 +86,7 @@ func (d *DB) Entities(ctx context.Context, serverID string, names ...string) ([]
 	// FIXME: This doesn't spark joy, it wasn't obvious how to safely use
 	// SELECT foo FROM bar WHERE name IN (?) <-- not sure this is supported
 	for _, name := range names {
-		query := `SELECT name, karma FROM entities WHERE server_id = $1 AND name = $2 LIMIT 1`
+		query := `SELECT name, karma FROM entities WHERE server_id = $1 AND name = $2`
 		args := []any{serverID, name}
 
 		var entity popple.Entity
