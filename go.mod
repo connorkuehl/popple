@@ -6,7 +6,7 @@ require (
 	github.com/bwmarrin/discordgo v0.27.0
 	github.com/google/wire v0.5.0
 	github.com/sirupsen/logrus v1.9.0
-	modernc.org/sqlite v1.20.2
+	modernc.org/sqlite v1.20.3
 )
 
 require (
