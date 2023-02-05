@@ -390,7 +390,7 @@ var _ = Describe("Bot", func() {
 		Context("with a valid argument", func() {
 			limit := 3
 
-			It("constrains the size of the leaderboard to the argument", Pending, func(ctx SpecContext) {
+			It("constrains the size of the loserboard to the argument", Pending, func(ctx SpecContext) {
 				before := command.DefaultLimit
 				command.DefaultLimit = uint(limit)
 				defer func() {

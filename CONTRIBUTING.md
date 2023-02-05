@@ -41,7 +41,7 @@ $ sqlite3 popple.sqlite '.read internal/database/sqlite/migrations/000001_create
 
 The code base should be compatible with a simple `go test ./...`, however, the
 BDD-style tests for the bot logic are built on top of [ginkgo](
-https://github.com/onsi/ginkgo). The test output is much nice when using
+https://github.com/onsi/ginkgo). The test output is much nicer when using
 the ginkgo command line tool:
 
 ```console
