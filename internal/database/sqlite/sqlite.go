@@ -147,9 +147,9 @@ func (d *DB) PutEntities(ctx context.Context, serverID string, entities ...poppl
 	return tx.Commit()
 }
 
-func (d *DB) Leaderboard(ctx context.Context, serverID string) (popple.Board, error) {
-	query := `SELECT name, karma FROM entities WHERE server_id = $1 ORDER BY karma DESC`
-	args := []any{serverID}
+func (d *DB) Leaderboard(ctx context.Context, serverID string, limit uint) (popple.Board, error) {
+	query := `SELECT name, karma FROM entities WHERE server_id = $1 ORDER BY karma DESC LIMIT $2`
+	args := []any{serverID, limit}
 
 	rows, err := d.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -169,9 +169,9 @@ func (d *DB) Leaderboard(ctx context.Context, serverID string) (popple.Board, er
 	return board, nil
 }
 
-func (d *DB) Loserboard(ctx context.Context, serverID string) (popple.Board, error) {
-	query := `SELECT name, karma FROM entities WHERE server_id = $1 ORDER BY karma ASC`
-	args := []any{serverID}
+func (d *DB) Loserboard(ctx context.Context, serverID string, limit uint) (popple.Board, error) {
+	query := `SELECT name, karma FROM entities WHERE server_id = $1 ORDER BY karma ASC LIMIT $2`
+	args := []any{serverID, limit}
 
 	rows, err := d.db.QueryContext(ctx, query, args...)
 	if err != nil {

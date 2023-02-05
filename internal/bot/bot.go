@@ -20,8 +20,8 @@ type DB interface {
 	PutConfig(context.Context, popple.ServerConfig) error
 	Entities(ctx context.Context, serverID string, names ...string) ([]popple.Entity, error)
 	PutEntities(ctx context.Context, serverID string, entities ...popple.Entity) error
-	Leaderboard(ctx context.Context, serverID string) (popple.Board, error)
-	Loserboard(ctx context.Context, serverID string) (popple.Board, error)
+	Leaderboard(ctx context.Context, serverID string, limit uint) (popple.Board, error)
+	Loserboard(ctx context.Context, serverID string, limit uint) (popple.Board, error)
 }
 
 type CommandRouter interface {

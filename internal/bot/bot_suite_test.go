@@ -3,8 +3,8 @@ package bot_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/connorkuehl/popple/internal/bot"
@@ -154,7 +154,7 @@ var _ = Describe("Bot", func() {
 
 			It("does not modify the database", func(ctx SpecContext) {
 				var err error
-				board, err = db.Leaderboard(ctx, "123")
+				board, err = db.Leaderboard(ctx, "123", 10)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(board).To(HaveLen(0))
@@ -316,7 +316,7 @@ var _ = Describe("Bot", func() {
 		Context("with a valid argument", func() {
 			limit := 3
 
-			It("constrains the size of the leaderboard to the argument", Pending, func(ctx SpecContext) {
+			It("constrains the size of the leaderboard to the argument", func(ctx SpecContext) {
 				before := command.DefaultLimit
 				command.DefaultLimit = uint(limit)
 				defer func() {
@@ -339,8 +339,8 @@ var _ = Describe("Bot", func() {
 
 				Expect(session.Responses).To(HaveLen(1))
 
-				lines := strings.Split(session.Responses[0].Message.Content, "\n")
-				Expect(lines).To(HaveLen(3))
+				board := parseBoardOutput(session.Responses[0].Message.Content)
+				Expect(board).To(HaveLen(limit))
 			})
 		})
 
@@ -390,7 +390,7 @@ var _ = Describe("Bot", func() {
 		Context("with a valid argument", func() {
 			limit := 3
 
-			It("constrains the size of the loserboard to the argument", Pending, func(ctx SpecContext) {
+			It("constrains the size of the loserboard to the argument", func(ctx SpecContext) {
 				before := command.DefaultLimit
 				command.DefaultLimit = uint(limit)
 				defer func() {
@@ -413,8 +413,8 @@ var _ = Describe("Bot", func() {
 
 				Expect(session.Responses).To(HaveLen(1))
 
-				lines := strings.Split(session.Responses[0].Message.Content, "\n")
-				Expect(lines).To(HaveLen(3))
+				board := parseBoardOutput(session.Responses[0].Message.Content)
+				Expect(board).To(HaveLen(limit))
 			})
 		})
 
@@ -441,3 +441,25 @@ var _ = Describe("Bot", func() {
 		})
 	})
 })
+
+func parseBoardOutput(s string) []popple.Entity {
+	re := regexp.MustCompile(`\*\s+(.+) has (.+) karma.`)
+	matches := re.FindAllStringSubmatch(s, -1)
+
+	var entities []popple.Entity
+
+	for _, match := range matches {
+		if len(match) != len([]string{"string", "name", "karma"}) {
+			panic("failed to parse")
+		}
+
+		karma, err := strconv.Atoi(match[2])
+		if err != nil {
+			panic(err)
+		}
+
+		entities = append(entities, popple.Entity{Name: match[1], Karma: int64(karma)})
+	}
+
+	return entities
+}

@@ -237,7 +237,7 @@ func (b *Bot) handleBoard(ctx context.Context, guildID, channelID, content strin
 		boardFunc = b.db.Loserboard
 	}
 
-	board, err := boardFunc(ctx, guildID)
+	board, err := boardFunc(ctx, guildID, limit)
 	if err != nil {
 		ll.WithError(err).Error("board")
 		return
