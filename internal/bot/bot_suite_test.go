@@ -361,8 +361,29 @@ var _ = Describe("Bot", func() {
 		})
 
 		Context("for a server with karma bumps", func() {
-			It("responds with a list ordered from most karma to least karma", Pending, func(ctx SpecContext) {
+			It("responds with a list ordered from most karma to least karma", func(ctx SpecContext) {
+				session = discordtest.NewResponseRecorder([]discord.Message{
+					{ID: "1", GuildID: "123", ChannelID: "456", Content: botName + " top"},
+				})
 
+				preexisting := []popple.Entity{
+					{Name: "Boop", Karma: 10},
+					{Name: "Bip", Karma: -10},
+					{Name: "Bop", Karma: 100},
+				}
+				Expect(db.PutEntities(ctx, "123", preexisting...)).ToNot(HaveOccurred())
+
+				b := bot.New(session, db, router)
+				_ = b.Listen(ctx)
+
+				Expect(session.Responses).To(HaveLen(1))
+
+				got := parseBoardOutput(session.Responses[0].Message.Content)
+				Expect(got).To(Equal([]popple.Entity{
+					{Name: "Bop", Karma: 100},
+					{Name: "Boop", Karma: 10},
+					{Name: "Bip", Karma: -10},
+				}))
 			})
 		})
 	})
@@ -435,8 +456,29 @@ var _ = Describe("Bot", func() {
 		})
 
 		Context("for a server with karma bumps", func() {
-			It("responds with a list ordered from least karma to most karma", Pending, func(ctx SpecContext) {
+			It("responds with a list ordered from least karma to most karma", func(ctx SpecContext) {
+				session = discordtest.NewResponseRecorder([]discord.Message{
+					{ID: "1", GuildID: "123", ChannelID: "456", Content: botName + " bot"},
+				})
 
+				preexisting := []popple.Entity{
+					{Name: "Boop", Karma: 10},
+					{Name: "Bip", Karma: -10},
+					{Name: "Bop", Karma: 100},
+				}
+				Expect(db.PutEntities(ctx, "123", preexisting...)).ToNot(HaveOccurred())
+
+				b := bot.New(session, db, router)
+				_ = b.Listen(ctx)
+
+				Expect(session.Responses).To(HaveLen(1))
+
+				got := parseBoardOutput(session.Responses[0].Message.Content)
+				Expect(got).To(Equal([]popple.Entity{
+					{Name: "Bip", Karma: -10},
+					{Name: "Boop", Karma: 10},
+					{Name: "Bop", Karma: 100},
+				}))
 			})
 		})
 	})
