@@ -36,3 +36,14 @@ Finally, you'll need to set up the SQLite database:
 ```console
 $ sqlite3 popple.sqlite '.read internal/database/sqlite/migrations/000001_create_tables.up.sql'
 ```
+
+### Testing
+
+The code base should be compatible with a simple `go test ./...`, however, the
+BDD-style tests for the bot logic are built on top of [ginkgo](
+https://github.com/onsi/ginkgo). The test output is much nice when using
+the ginkgo command line tool:
+
+```console
+$ ginkgo run internal/bot
+```

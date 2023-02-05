@@ -14,7 +14,7 @@ var (
 	ErrInvalidArgument = errors.New("invalid argument")
 )
 
-var defaultLimit uint = 10
+var DefaultLimit uint = 10
 
 type SetAnnounceArgs struct {
 	NoAnnounce bool
@@ -113,7 +113,7 @@ func (args *BoardArgs) ParseArg(s string) error {
 		if err != nil {
 			return err
 		}
-		args.Limit = defaultLimit
+		args.Limit = DefaultLimit
 	} else {
 		parsedLimit, err := strconv.Atoi(scanner.Text())
 		if err != nil {

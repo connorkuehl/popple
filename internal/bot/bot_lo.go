@@ -125,7 +125,7 @@ func (b *Bot) handleChangeKarma(ctx context.Context, args *command.ChangeKarmaAr
 		return
 	}
 
-	err = b.discord.SendMessageToChannel(channelID, rsp.String())
+	err = b.discord.SendMessageToChannel(channelID, strings.TrimSpace(rsp.String()))
 	if err != nil {
 		ll.WithError(err).Error("send message to channel")
 		return
@@ -171,7 +171,7 @@ func (b *Bot) handleCheckKarma(ctx context.Context, args *command.CheckKarmaArgs
 		return
 	}
 
-	err = b.discord.SendMessageToChannel(channelID, rsp.String())
+	err = b.discord.SendMessageToChannel(channelID, strings.TrimSpace(rsp.String()))
 	if err != nil {
 		ll.WithError(err).Error("send message to channel")
 		return
@@ -257,7 +257,7 @@ func (b *Bot) handleBoard(ctx context.Context, guildID, channelID, content strin
 		return
 	}
 
-	err = b.discord.SendMessageToChannel(channelID, r.String())
+	err = b.discord.SendMessageToChannel(channelID, strings.TrimSpace(r.String()))
 	if err != nil {
 		ll.WithError(err).Error("failed to send message to Discord channel")
 		return

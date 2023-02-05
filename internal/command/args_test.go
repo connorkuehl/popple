@@ -142,7 +142,7 @@ func TestBoardArgs(t *testing.T) {
 	}{
 		{
 			input: "",
-			want:  result{args: BoardArgs{Limit: defaultLimit}},
+			want:  result{args: BoardArgs{Limit: DefaultLimit}},
 		},
 		{
 			input: "3",

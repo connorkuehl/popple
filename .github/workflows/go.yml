@@ -27,9 +27,15 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
+    - name: Install ginkgo
+      run: go install github.com/onsi/ginkgo/v2/ginkgo@latest
+
     - name: Build
       run: go build -v ./...
 
     - name: Test
       run: go test -v ./...
+
+    - name: Specification
+      run: ginkgo run -v internal/bot
 
