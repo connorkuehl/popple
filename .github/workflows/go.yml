@@ -35,7 +35,3 @@ jobs:
 
     - name: Test
       run: go test -v ./...
-
-    - name: Specification
-      run: ginkgo run -v internal/bot
-
