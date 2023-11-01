@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/google/wire v0.5.0
-	github.com/onsi/ginkgo/v2 v2.12.1
+	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.28.0
 	github.com/sirupsen/logrus v1.9.3
 	modernc.org/sqlite v1.27.0
